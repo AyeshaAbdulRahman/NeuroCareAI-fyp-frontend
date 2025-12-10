@@ -1,0 +1,313 @@
+.diagnosis-container,
+.diagnosis-preprocess,
+.diagnosis-result,
+.report-history,
+.visualization-page {
+  padding: 4rem 10%;
+  text-align: center;
+  background: var(--bg-dark);
+  color: var(--text-light);
+  min-height: 100vh;
+}
+
+.diagnosis-form {
+  max-width: 600px;
+  margin: 2rem auto;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
+}
+
+.upload-section,
+.symptom-section {
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.upload-section input {
+  width: 100%;
+  padding: 0.8rem;
+  border-radius: 12px;
+  border: none;
+  margin-top: 0.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.symptom-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
+.symptom-item {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.6rem 1.2rem;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.symptom-item.active {
+  background: var(--gradient);
+  color: #fff;
+}
+
+/* Progress */
+.progress-container {
+  width: 60%;
+  margin: 2rem auto;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 30px;
+  overflow: hidden;
+}
+.progress-bar {
+  width: 0%;
+  height: 10px;
+  background: var(--gradient);
+  animation: progressAnim 6s forwards;
+}
+@keyframes progressAnim {
+  to { width: 100%; }
+}
+
+/* AI Loader */
+.ai-loader {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
+.wave {
+  width: 8px;
+  height: 40px;
+  background: var(--gradient);
+  margin: 0 4px;
+  border-radius: 8px;
+  animation: waveAnim 1s infinite ease-in-out;
+}
+.wave:nth-child(2) { animation-delay: 0.2s; }
+.wave:nth-child(3) { animation-delay: 0.4s; }
+@keyframes waveAnim {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+
+/* Result Page */
+.result-card {
+  max-width: 500px;
+  margin: 2rem auto;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 2rem;
+}
+
+.confidence-bar {
+  width: 100%;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 0.8rem 0;
+}
+.bar-fill {
+  height: 100%;
+  background: var(--gradient);
+  transition: width 0.5s;
+}
+
+.result-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.2rem;
+}
+
+.report-history table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 2rem;
+}
+.report-history th, .report-history td {
+  padding: 0.9rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.report-history th {
+  color: var(--secondary);
+}
+.btn-small {
+  padding: 0.5rem 1.2rem;
+  border-radius: 30px;
+}
+
+.export-btn {
+  margin-top: 2rem;
+}
+
+/* Visualization */
+.visualization-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+.visual-card {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1.5rem;
+  border-radius: 14px;
+}
+.placeholder-chart {
+  background: rgba(255, 255, 255, 0.07);
+  height: 180px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #b6b8d6;
+}
+
+
+/* ------------------------------
+   Diagnosis Main Overview Page
+------------------------------- */
+
+.diagnosis-main-page {
+  padding: 4rem 10%;
+  background: var(--bg-dark);
+  color: var(--text-light);
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+}
+
+.diagnosis-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.diagnosis-header h2 {
+  font-size: 2.4rem;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-family: 'Poppins', sans-serif;
+  margin-bottom: 1rem;
+}
+
+.diagnosis-header .section-subtext {
+  color: var(--text-muted);
+  max-width: 850px;
+  margin: 0 auto;
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+/* Step-by-Step Flow */
+.diagnosis-flow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.flow-step {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 18px;
+  padding: 2rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 850px;
+  position: relative;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.1);
+  cursor: pointer;
+}
+
+.flow-step:hover {
+  transform: translateY(-5px);
+  border-color: rgba(236, 72, 153, 0.3);
+  box-shadow: 0 0 25px rgba(236, 72, 153, 0.25);
+}
+
+.flow-step .icon {
+  font-size: 2.4rem;
+  flex-shrink: 0;
+}
+
+.flow-content h3 {
+  font-size: 1.3rem;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.flow-content p {
+  color: #b6b8d6;
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+}
+
+.flow-btn {
+  font-size: 0.9rem;
+  padding: 0.6rem 1.4rem;
+  border-radius: 30px;
+}
+
+.flow-arrow {
+  text-align: center;
+  font-size: 1.6rem;
+  color: var(--secondary);
+  margin-top: 1rem;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(5px); }
+}
+
+/* CTA Section */
+.diagnosis-cta {
+  text-align: center;
+  margin-top: 3rem;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.diagnosis-cta h3 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.5rem;
+  margin-bottom: 0.8rem;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.diagnosis-cta p {
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+}
+
+.start-btn {
+  font-size: 1rem;
+  padding: 0.8rem 2rem;
+  border-radius: 40px;
+  box-shadow: 0 0 20px rgba(236, 72, 153, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .flow-step {
+    flex-direction: column;
+    text-align: center;
+  }
+  .flow-step .icon {
+    margin-bottom: 1rem;
+  }
+}

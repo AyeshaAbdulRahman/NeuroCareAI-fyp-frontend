@@ -1,0 +1,110 @@
+/* --------------------------
+   About Page — NeuroCare AI
+   -------------------------- */
+
+.about-page {
+  font-family: 'Inter', sans-serif;
+  background-color: #0A0A1A;
+  color: #E4E4F7;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* Hero */
+.about-page header {
+  padding: 8rem 10% 5rem;
+  text-align: center;
+  background: radial-gradient(circle at top, #1C173A 0%, #0A0A1A 80%);
+}
+
+.about-page header h2 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 3rem;
+  background: linear-gradient(135deg, #EC4899, #8B5CF6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 1rem;
+}
+
+.about-page header p {
+  color: #B6B8D6;
+  max-width: 700px;
+  margin: 0 auto;
+  font-size: 1.05rem;
+}
+
+/* Section Base */
+.about-page section {
+  padding: 5rem 10%;
+}
+
+.about-page section h3 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 2.2rem;
+  background: linear-gradient(135deg, #EC4899, #8B5CF6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.about-page section p {
+  color: #C7C9E3;
+  max-width: 900px;
+  margin: 0 auto 2rem;
+  text-align: center;
+}
+
+/* Mission & Philosophy Cards */
+.card-section {
+  background: rgba(255,255,255,0.03);
+  border-radius: 1rem;
+  padding: 3rem;
+  margin-top: 2rem;
+  box-shadow: 0 0 25px rgba(139,92,246,0.15);
+}
+
+/* Technology Section */
+.tech-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 3rem;
+}
+
+.tech-card {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(236,72,153,0.15);
+  border-radius: 1rem;
+  padding: 2rem;
+  width: 320px;
+  text-align: center;
+  transition: 0.3s;
+}
+
+.tech-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 0 35px rgba(139,92,246,0.4);
+}
+
+.tech-card h5 {
+  font-family: 'Poppins', sans-serif;
+  color: #EC4899;
+  font-size: 1.25rem; /* increased from default */
+  font-weight: 600;
+  margin-bottom: 0.8rem;
+}
+
+.tech-card p {
+  color: #D1D5F0;
+  font-size: 0.95rem;
+}
+
+/* Responsive */
+@media(max-width: 768px) {
+  .tech-grid {
+    flex-direction: column;
+    align-items: center;
+  }
+}

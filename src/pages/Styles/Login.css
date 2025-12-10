@@ -1,0 +1,153 @@
+/* ---------------------------------------------
+   NeuroCare AI — Login Page (Non-Global Version)
+---------------------------------------------- */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Only apply styling inside the login page container */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;      /* Center vertically */
+  align-items: center;          /* Center horizontally */
+  background: radial-gradient(circle at top, #1C173A 0%, #0A0A1A 85%);
+  color: #E4E4F7;
+  padding: 0;                   /* Remove extra padding */
+}
+/* Inner Auth Container */
+.auth-container {
+  text-align: center;
+  width: 100%;
+  max-width: 450px;
+}
+/* Brand Title */
+.brand-title {
+  font-family: 'Poppins', sans-serif;
+  font-size: 2.4rem;
+  text-align: center;
+  background: linear-gradient(135deg, #EC4899, #8B5CF6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 1rem;
+}
+
+/* Glassmorphic Form Box */
+.form-box {
+    
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(236, 72, 153, 0.15);
+  border-radius: 1.2rem;
+  padding: 3rem 2.5rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 0 40px rgba(139, 92, 246, 0.25);
+  backdrop-filter: blur(10px);
+  text-align: center;
+  animation: fadeIn 0.7s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Headings */
+.form-box h2 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.9rem;
+  background: linear-gradient(135deg, #EC4899, #8B5CF6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.5rem;
+}
+
+.auth-subtext {
+  color: #B6B8D6;
+  font-size: 0.95rem;
+  margin-bottom: 2rem;
+}
+
+/* Inputs */
+input {
+padding-left: 50px;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+  color: #E4E4F7;
+  outline: none;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+}
+
+input:focus {
+  border-color: #EC4899;
+  box-shadow: 0 0 12px rgba(236, 72, 153, 0.3);
+}
+
+input::placeholder {
+  color: #B6B8D6;
+}
+
+/* Button */
+.auth-btn {
+  background: linear-gradient(135deg, #EC4899, #8B5CF6);
+  border: none;
+  color: white;
+  width: 100%;
+  padding: 1rem;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  box-shadow: 0 0 25px rgba(236, 72, 153, 0.4);
+  transition: all 0.3s ease;
+}
+
+.auth-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0 35px rgba(236, 72, 153, 0.6);
+}
+
+/* Text Links */
+.text-small {
+  text-align: center;
+  color: #B6B8D6;
+  font-size: 0.9rem;
+  margin-top: 1rem;
+}
+
+.text-small a {
+  color: #EC4899;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.text-small a:hover {
+  color: #8B5CF6;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .form-box {
+    padding: 2rem 1.5rem;
+  }
+
+  .brand-title {
+    font-size: 2rem;
+  }
+}
