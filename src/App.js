@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  useLocation,
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useLocation,
 } from "react-router-dom";
 import Navbar from "./Components/NavBar";
 import Footer from "./Components/Footer";
@@ -25,51 +25,54 @@ import ScrollToTopButton from "./Components/ScrollToTopButton";
 import "./App.css";
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const location = useLocation();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const location = useLocation();
 
-  const hideNavbarFooter =
-    location.pathname === "/login" ||
-    location.pathname === "/signup" ||
-    location.pathname === "/chatbot";
+  const hideNavbarFooter =
+    location.pathname === "/login" ||
+    location.pathname === "/signup" ||
+    location.pathname === "/chatbot";
 
-  return (
-    <>
-      {!hideNavbarFooter && (
-        <Navbar isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />
-      )}
+  return (
+    <>
+      {!hideNavbarFooter && (
+        <Navbar isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />
+      )}
 
-      <Routes>
-        <Route path="/" element={<Home isLoggedIn={isLoggedIn} />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/login" element={<Login setIsLoggedIn={setIsLoggedIn} />} />
-        <Route path="/signup" element={<Signup setIsLoggedIn={setIsLoggedIn} />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/updateprofile" element={<UpdateProfile />} />
-        <Route path="/feedback" element={<Feedback />} />
-        <Route path="/chatbot" element={<Chatbot />} />
+      <Routes>
+        <Route path="/" element={<Home isLoggedIn={isLoggedIn} />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/login" element={<Login setIsLoggedIn={setIsLoggedIn} />} />
+        <Route path="/signup" element={<Signup setIsLoggedIn={setIsLoggedIn} />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/updateprofile" element={<UpdateProfile />} />
+        <Route path="/feedback" element={<Feedback />} />
+        <Route path="/chatbot" element={<Chatbot />} />
 
-        {/* Diagnosis Module Routes */}
-        <Route path="/diagnosis" element={<DiagnosisMain />} />
-        <Route path="/diagnosis/input" element={<DiagnosisInput />} />
-        <Route path="/diagnosis/preprocess" element={<DiagnosisPreprocess />} />
-        <Route path="/diagnosis/result" element={<DiagnosisResult />} />
-        <Route path="/diagnosis/report-history" element={<ReportHistory />} />
-        <Route path="/diagnosis/visualization" element={<Visualization />} />
-      </Routes>
+        {/* Diagnosis Module Routes */}
+        <Route path="/diagnosis" element={<DiagnosisMain />} />
+        <Route path="/diagnosis/input" element={<DiagnosisInput />} />
+        <Route path="/diagnosis/preprocess" element={<DiagnosisPreprocess />} />
+        <Route path="/diagnosis/result" element={<DiagnosisResult />} />
+        <Route path="/diagnosis/report-history" element={<ReportHistory />} />
+        <Route path="/diagnosis/visualization" element={<Visualization />} />
+      </Routes>
 
-      <ScrollToTopButton />
-      {!hideNavbarFooter && <Footer />}
-    </>
-  );
+      {/* SCROLL UP BUTTON:*/}
+      {!hideNavbarFooter && <ScrollToTopButton />} 
+      
+      {/* Footer */}
+      {!hideNavbarFooter && <Footer />}
+    </>
+  );
 }
 
 function AppWrapper() {
-  return (
-    <Router>
-      <App />
-    </Router>
-  );
+  return (
+    <Router>
+      <App />
+    </Router>
+  );
 }
 
 export default AppWrapper;
