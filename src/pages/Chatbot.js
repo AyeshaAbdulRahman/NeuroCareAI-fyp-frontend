@@ -117,8 +117,8 @@ function Chatbot() {
         <button className="new-chat-btn" onClick={startNewChat}>
           <i className="bi bi-plus-circle"></i> New Chat
         </button>
-        <div className="search-box">
-          <i className="bi bi-search "></i>
+        <div className="chat-search-box">
+          <i className="bi bi-search"></i>
           <input
             type="text"
             placeholder="Search chats..."

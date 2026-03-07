@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --bg-dark: #0f0e17;
   --text-light: #e4e4e7;
   --text-muted: #9ca3af;
@@ -34,7 +34,7 @@
   margin-bottom: 0.6rem;
 }
 
-/* ✅ Back to Home */
+/* Back to Home */
 .back-home-btn {
   background: rgba(255, 255, 255, 0.05);
   color: #b6b8d6;
@@ -56,13 +56,15 @@
   transform: scale(1.05);
 }
 
-/* ✅ New Chat (grey professional theme) */
+/* New Chat (grey professional theme) */
 .new-chat-btn {
   background: rgba(255, 255, 255, 0.08);
   color: #f3f3f3;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 10px;
   padding: 0.7rem 1rem;
+  width: 100%;
+  min-height: 44px;
   font-weight: 500;
   cursor: pointer;
   display: flex;
@@ -76,8 +78,8 @@
   background: rgba(255, 255, 255, 0.18);
 }
 
-/* ✅ Search Box Proper Alignment */
-.search-box {
+/* Search field sized and aligned to match the New Chat button */
+.chat-search-box {
   position: relative;
   margin: 1rem 0;
   width: 100%;
@@ -85,36 +87,37 @@
   align-items: center;
 }
 
-.search-box i {
+.chat-search-box i {
   position: absolute;
   left: 14px;
   top: 50%;
-  transform: translateY(-52%); /* ✅ perfectly centers vertically */
+  transform: translateY(-52%);
   font-size: 1.05rem;
   color: #b6b8d6;
   pointer-events: none;
-  padding-bottom: 13px; /* ✅ adds slight bottom padding for pixel-perfect balance */
+  padding-bottom: 0;
 }
 
-.search-box input {
+.chat-search-box input {
   width: 100%;
   background: rgba(255, 255, 255, 0.08);
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 10px;
-  padding: 0.7rem 1rem 0.7rem 2.8rem; /* ✅ enough space for icon */
+  min-height: 44px;
+  padding: 0.7rem 1rem 0.7rem 2.8rem;
   color: #fff;
   outline: none;
   font-size: 0.95rem;
-  line-height: 1.5rem;
-  transition: background 0.3s ease;
+  line-height: 1.2;
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
-.search-box input::placeholder {
+.chat-search-box input::placeholder {
   color: #b6b8d6;
   opacity: 0.9;
 }
 
-/* ✅ Chat History */
+/* Chat History */
 .chat-history {
   flex: 1;
   overflow-y: auto;

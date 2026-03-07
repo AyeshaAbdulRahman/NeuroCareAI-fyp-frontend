@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import authService from "../api/authService";
 import "./Styles/Signup.css";
 
 function Signup({ setIsLoggedIn }) {
@@ -19,13 +20,17 @@ function Signup({ setIsLoggedIn }) {
     confirmPassword: "",
   });
 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
   // Handle input change
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError("");
   };
 
   // Handle submit
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const {
@@ -55,18 +60,52 @@ function Signup({ setIsLoggedIn }) {
       !password ||
       !confirmPassword
     ) {
-      alert("Please fill in all fields");
+      setError("Please fill in all fields");
       return;
     }
 
     if (password !== confirmPassword) {
-      alert("Passwords do not match!");
+      setError("Passwords do not match!");
       return;
     }
 
-    alert("Account created successfully!");
-    setIsLoggedIn(true);
-    navigate("/dashboard");
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const userData = {
+        firstname,
+        lastname,
+        username,
+        email,
+        age: parseInt(age),
+        gender,
+        category,
+        country,
+        city,
+        password,
+      };
+
+      const response = await authService.signup(userData);
+
+      if (response.success) {
+        setIsLoggedIn(true);
+        navigate("/dashboard");
+      } else {
+        setError(response.message || "Registration failed");
+      }
+    } catch (err) {
+      console.error("Signup error caught:", err);
+      // Display the error message from the thrown object
+      setError(err.message || "An error occurred during registration");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -75,6 +114,8 @@ function Signup({ setIsLoggedIn }) {
         <h1 className="brand-title">NeuroCare AI</h1>
         <div className="form-box">
           <h2>Create Your Account</h2>
+
+          {error && <div className="error-message">{error}</div>}
 
           <form onSubmit={handleSubmit}>
             <input
@@ -167,8 +208,8 @@ function Signup({ setIsLoggedIn }) {
               required
             />
 
-            <button type="submit" className="auth-btn">
-              Sign Up
+            <button type="submit" className="auth-btn" disabled={loading}>
+              {loading ? "Creating Account..." : "Sign Up"}
             </button>
 
             <div className="text-small">

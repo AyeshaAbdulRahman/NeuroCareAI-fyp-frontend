@@ -141,6 +141,35 @@ input::placeholder {
   color: #8B5CF6;
 }
 
+/* Link Button (For Forgot Password) */
+.link-button {
+  background: none;
+  border: none;
+  color: #EC4899;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.link-button:hover {
+  color: #8B5CF6;
+  text-decoration: underline;
+}
+
+/* Error Message */
+.error-message {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
 /* Responsive */
 @media (max-width: 480px) {
   .form-box {

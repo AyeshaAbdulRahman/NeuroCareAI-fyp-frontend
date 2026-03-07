@@ -102,6 +102,12 @@ select:focus {
   box-shadow: 0 0 30px rgba(236, 72, 153, 0.6);
 }
 
+.auth-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* ✅ Small Text */
 .text-small {
   text-align: center;
@@ -120,6 +126,18 @@ select:focus {
   text-decoration: underline;
 }
 
+/* ✅ Error Message */
+.error-message {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
 /* ✅ Animation */
 @keyframes fadeInUp {
   0% {
@@ -129,5 +147,16 @@ select:focus {
   100% {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .form-box {
+    padding: 2rem 1.5rem;
+  }
+
+  .brand-title {
+    font-size: 2rem;
   }
 }
