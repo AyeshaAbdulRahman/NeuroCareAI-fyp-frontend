@@ -8,7 +8,7 @@ export const adminService = {
       if (category) params.category = category;
       
       const response = await api.get('/admin/users', { params });
-      return response.data;
+      return response.data.users || response.data;
     } catch (error) {
       throw error.response?.data || { success: false, message: 'Failed to get users' };
     }
@@ -18,7 +18,7 @@ export const adminService = {
   getUser: async (userId) => {
     try {
       const response = await api.get(`/admin/users/${userId}`);
-      return response.data;
+      return response.data.user || response.data;
     } catch (error) {
       throw error.response?.data || { success: false, message: 'Failed to get user' };
     }
@@ -48,6 +48,11 @@ export const adminService = {
   getStats: async () => {
     try {
       const response = await api.get('/admin/stats');
+      // Backend returns { success: true, stats: {...} }
+      // We need to return just the stats object or handle both cases
+      if (response.data.success && response.data.stats) {
+        return response.data.stats;
+      }
       return response.data;
     } catch (error) {
       throw error.response?.data || { success: false, message: 'Failed to get statistics' };
@@ -58,7 +63,7 @@ export const adminService = {
   getAllFeedback: async () => {
     try {
       const response = await api.get('/feedback/all');
-      return response.data;
+      return response.data.feedbacks || response.data || [];
     } catch (error) {
       throw error.response?.data || { success: false, message: 'Failed to get feedback' };
     }
@@ -72,7 +77,18 @@ export const adminService = {
     } catch (error) {
       throw error.response?.data || { success: false, message: 'Failed to update feedback' };
     }
+  },
+
+  // Delete feedback (Admin)
+  deleteFeedback: async (feedbackId) => {
+    try {
+      const response = await api.delete(`/feedback/${feedbackId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { success: false, message: 'Failed to delete feedback' };
+    }
   }
 };
 
 export default adminService;
+

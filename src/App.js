@@ -26,6 +26,10 @@ import Visualization from "./pages/Diagnosis/Visualization";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
 import AdminUsers from "./pages/Admin/AdminUsers";
 import AdminFeedback from "./pages/Admin/AdminFeedback";
+import AdminProfile from "./pages/Admin/AdminProfile";
+import AdminSettings from "./pages/Admin/AdminSettings";
+import AdminActivity from "./pages/Admin/AdminActivity";
+import AdminReports from "./pages/Admin/AdminReports";
 import ScrollToTopButton from "./Components/ScrollToTopButton";
 import "./App.css";
 
@@ -154,7 +158,7 @@ function App() {
           </ProtectedRoute>
         } />
 
-        {/* Admin Routes */}
+        {/* Admin Routes - Separate Pages */}
         <Route path="/admin" element={
           <ProtectedRoute requireAdmin={true}>
             <AdminDashboard />
@@ -168,6 +172,26 @@ function App() {
         <Route path="/admin/feedback" element={
           <ProtectedRoute requireAdmin={true}>
             <AdminFeedback />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/profile" element={
+          <ProtectedRoute requireAdmin={true}>
+            <AdminProfile />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/settings" element={
+          <ProtectedRoute requireAdmin={true}>
+            <AdminSettings />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/activity" element={
+          <ProtectedRoute requireAdmin={true}>
+            <AdminActivity />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/reports" element={
+          <ProtectedRoute requireAdmin={true}>
+            <AdminReports />
           </ProtectedRoute>
         } />
       </Routes>
@@ -190,3 +214,4 @@ function AppWrapper() {
 }
 
 export default AppWrapper;
+

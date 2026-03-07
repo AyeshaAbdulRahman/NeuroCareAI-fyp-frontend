@@ -87,6 +87,18 @@ function AdminUsers() {
             <i className="bi bi-person-gear"></i>
             <span>Profile</span>
           </Link>
+          <Link to="/admin/settings">
+            <i className="bi bi-gear"></i>
+            <span>Settings</span>
+          </Link>
+          <Link to="/admin/activity">
+            <i className="bi bi-clock-history"></i>
+            <span>Activity</span>
+          </Link>
+          <Link to="/admin/reports">
+            <i className="bi bi-bar-chart"></i>
+            <span>Reports</span>
+          </Link>
           <button onClick={() => navigate("/dashboard")}>
             <i className="bi bi-arrow-left"></i>
             <span>Back to User</span>
@@ -99,6 +111,9 @@ function AdminUsers() {
         <header className="admin-header">
           <h1>User Management</h1>
           <div className="header-actions">
+            <button className="export-btn" onClick={() => alert("Exporting users to CSV...")}>
+              <i className="bi bi-download"></i> Export CSV
+            </button>
             <span className="admin-badge">
               <i className="bi bi-shield-check"></i> Administrator
             </span>
@@ -107,13 +122,58 @@ function AdminUsers() {
 
         {error && <div className="error-message">{error}</div>}
 
+        {/* Stats Cards */}
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-icon users-icon">
+              <i className="bi bi-people-fill"></i>
+            </div>
+            <div className="stat-content">
+              <h3>{users.length}</h3>
+              <p>Total Users</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon new-icon">
+              <i className="bi bi-person-plus-fill"></i>
+            </div>
+            <div className="stat-content">
+              <h3>{users.filter(u => {
+                const created = new Date(u.created_at);
+                const now = new Date();
+                const diff = (now - created) / (1000 * 60 * 60 * 24);
+                return diff <= 30;
+              }).length}</h3>
+              <p>New This Month</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon" style={{background: 'rgba(16, 185, 129, 0.2)', color: '#10B981'}}>
+              <i className="bi bi-check-circle-fill"></i>
+            </div>
+            <div className="stat-content">
+              <h3>{users.filter(u => u.is_active).length}</h3>
+              <p>Active Users</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon" style={{background: 'rgba(239, 68, 68, 0.2)', color: '#EF4444'}}>
+              <i className="bi bi-x-circle-fill"></i>
+            </div>
+            <div className="stat-content">
+              <h3>{users.filter(u => !u.is_active).length}</h3>
+              <p>Inactive Users</p>
+            </div>
+          </div>
+        </div>
+
         {/* Filters */}
         <div className="filters-bar">
           <div className="search-box">
             <i className="bi bi-search"></i>
             <input
               type="text"
-              placeholder="Search users..."
+              placeholder="Search users by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -137,7 +197,7 @@ function AdminUsers() {
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Username</th>
+                <th>User</th>
                 <th>Email</th>
                 <th>Category</th>
                 <th>Country</th>
@@ -168,7 +228,7 @@ function AdminUsers() {
                         {user.category}
                       </span>
                     </td>
-                    <td>{user.country}</td>
+                    <td>{user.country || '-'}</td>
                     <td>
                       <button
                         className={`status-btn ${user.is_active ? 'active' : 'inactive'}`}
@@ -177,7 +237,7 @@ function AdminUsers() {
                         {user.is_active ? 'Active' : 'Inactive'}
                       </button>
                     </td>
-                    <td>{new Date(user.created_at).toLocaleDateString()}</td>
+                    <td>{user.created_at ? new Date(user.created_at).toLocaleDateString() : '-'}</td>
                     <td>
                       <div className="action-buttons">
                         <button
@@ -243,7 +303,7 @@ function AdminUsers() {
                     <option value="Other">Other</option>
                   </select>
                   <input name="country" defaultValue={editingUser.country} placeholder="Country" />
-                  <select name="gender" defaultValue={editingUser.gender}>
+                  <select name="gender" defaultValue={editingUser.gender || 'Other'}>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
                     <option value="Other">Other</option>
@@ -252,7 +312,7 @@ function AdminUsers() {
                 </div>
                 <div className="modal-actions">
                   <button type="button" className="btn secondary" onClick={() => setEditingUser(null)}>Cancel</button>
-                  <button type="submit" className="btn">Save Changes</button>
+                  <button type="submit" className="btn btn-primary">Save Changes</button>
                 </div>
               </form>
             </div>
@@ -264,3 +324,4 @@ function AdminUsers() {
 }
 
 export default AdminUsers;
+

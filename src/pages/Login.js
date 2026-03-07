@@ -30,8 +30,13 @@ function Login({ setIsLoggedIn }) {
       const response = await authService.login({ email, password });
       
       if (response.success) {
-        setIsLoggedIn(true);
-        navigate("/dashboard");
+        const user = response.user || null;
+        setIsLoggedIn(user);
+        if (user?.is_admin) {
+          navigate("/admin");
+        } else {
+          navigate("/dashboard");
+        }
       } else {
         setError(response.message || "Login failed");
       }
@@ -94,3 +99,4 @@ function Login({ setIsLoggedIn }) {
 }
 
 export default Login;
+

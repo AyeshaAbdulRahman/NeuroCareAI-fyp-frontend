@@ -56,6 +56,18 @@ function AdminDashboard() {
             <i className="bi bi-person-gear"></i>
             <span>Profile</span>
           </Link>
+          <Link to="/admin/settings">
+            <i className="bi bi-gear"></i>
+            <span>Settings</span>
+          </Link>
+          <Link to="/admin/activity">
+            <i className="bi bi-clock-history"></i>
+            <span>Activity</span>
+          </Link>
+          <Link to="/admin/reports">
+            <i className="bi bi-bar-chart"></i>
+            <span>Reports</span>
+          </Link>
           <button onClick={() => navigate("/dashboard")}>
             <i className="bi bi-arrow-left"></i>
             <span>Back to User</span>
@@ -152,7 +164,11 @@ function AdminDashboard() {
               <i className="bi bi-chat-dots"></i>
               <span>Review Feedback</span>
             </button>
-            <button className="action-btn" onClick={() => navigate("/dashboard")}>
+            <button className="action-btn" onClick={() => navigate("/admin/reports")}>
+              <i className="bi bi-bar-chart"></i>
+              <span>View Reports</span>
+            </button>
+            <button className="action-btn" onClick={() => navigate("/admin/profile")}>
               <i className="bi bi-person"></i>
               <span>My Profile</span>
             </button>
@@ -164,3 +180,4 @@ function AdminDashboard() {
 }
 
 export default AdminDashboard;
+

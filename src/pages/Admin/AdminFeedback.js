@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { feedbackService } from "../../api/feedbackService";
+import { adminService } from "../../api/adminService";
 import "./Admin.css";
 
 function AdminFeedback() {
@@ -9,6 +9,7 @@ function AdminFeedback() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [filterPriority, setFilterPriority] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
@@ -17,8 +18,10 @@ function AdminFeedback() {
 
   const fetchFeedbacks = async () => {
     try {
-      const data = await feedbackService.getAllFeedback();
-      setFeedbacks(data);
+      const data = await adminService.getAllFeedback();
+      // Handle different response formats
+      const feedbackArray = Array.isArray(data) ? data : (data.feedbacks || []);
+      setFeedbacks(feedbackArray);
     } catch (err) {
       setError("Failed to load feedbacks");
     } finally {
@@ -28,7 +31,7 @@ function AdminFeedback() {
 
   const handleStatusUpdate = async (id, status) => {
     try {
-      await feedbackService.updateFeedbackStatus(id, status);
+      await adminService.updateFeedbackStatus(id, status);
       setFeedbacks(feedbacks.map(f => 
         f.id === id ? { ...f, status } : f
       ));
@@ -40,7 +43,7 @@ function AdminFeedback() {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this feedback?")) {
       try {
-        await feedbackService.deleteFeedback(id);
+        await adminService.deleteFeedback(id);
         setFeedbacks(feedbacks.filter(f => f.id !== id));
       } catch (err) {
         alert("Failed to delete feedback");
@@ -48,15 +51,26 @@ function AdminFeedback() {
     }
   };
 
-  const filteredFeedbacks = feedbacks.filter(f => 
-    !filterStatus || f.status === filterStatus
-  );
+  const filteredFeedbacks = feedbacks.filter(f => {
+    const matchesStatus = !filterStatus || f.status === filterStatus;
+    const matchesPriority = !filterPriority || f.priority === filterPriority;
+    return matchesStatus && matchesPriority;
+  });
 
   const getStatusColor = (status) => {
     switch(status) {
       case 'pending': return 'status-pending';
       case 'reviewed': return 'status-reviewed';
       case 'resolved': return 'status-resolved';
+      default: return '';
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    switch(priority) {
+      case 'high': return 'priority-high';
+      case 'medium': return 'priority-medium';
+      case 'low': return 'priority-low';
       default: return '';
     }
   };
@@ -92,6 +106,18 @@ function AdminFeedback() {
             <i className="bi bi-person-gear"></i>
             <span>Profile</span>
           </Link>
+          <Link to="/admin/settings">
+            <i className="bi bi-gear"></i>
+            <span>Settings</span>
+          </Link>
+          <Link to="/admin/activity">
+            <i className="bi bi-clock-history"></i>
+            <span>Activity</span>
+          </Link>
+          <Link to="/admin/reports">
+            <i className="bi bi-bar-chart"></i>
+            <span>Reports</span>
+          </Link>
           <button onClick={() => navigate("/dashboard")}>
             <i className="bi bi-arrow-left"></i>
             <span>Back to User</span>
@@ -112,7 +138,7 @@ function AdminFeedback() {
 
         {error && <div className="error-message">{error}</div>}
 
-        {/* Stats */}
+        {/* Stats Cards */}
         <div className="stats-grid">
           <div className="stat-card">
             <div className="stat-icon feedback-icon">
@@ -164,6 +190,16 @@ function AdminFeedback() {
             <option value="reviewed">Reviewed</option>
             <option value="resolved">Resolved</option>
           </select>
+          <select
+            value={filterPriority}
+            onChange={(e) => setFilterPriority(e.target.value)}
+            className="filter-select"
+          >
+            <option value="">All Priority</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
         </div>
 
         {/* Feedback List */}
@@ -185,6 +221,11 @@ function AdminFeedback() {
                     <span className={`status ${getStatusColor(feedback.status)}`}>
                       {feedback.status}
                     </span>
+                    {feedback.priority && (
+                      <span className={`priority-badge ${getPriorityColor(feedback.priority)}`}>
+                        {feedback.priority}
+                      </span>
+                    )}
                   </div>
                 </div>
                 
@@ -195,7 +236,7 @@ function AdminFeedback() {
                 <div className="feedback-footer">
                   <span className="date">
                     <i className="bi bi-calendar3"></i>
-                    {new Date(feedback.created_at).toLocaleDateString()}
+                    {feedback.created_at ? new Date(feedback.created_at).toLocaleDateString() : '-'}
                   </span>
                   <div className="feedback-controls">
                     <select
@@ -218,7 +259,10 @@ function AdminFeedback() {
               </div>
             ))
           ) : (
-            <div className="no-data">No feedback found</div>
+            <div className="no-data">
+              <i className="bi bi-chat-square-text"></i>
+              <p>No feedback found</p>
+            </div>
           )}
         </div>
       </main>
@@ -227,3 +271,4 @@ function AdminFeedback() {
 }
 
 export default AdminFeedback;
+
