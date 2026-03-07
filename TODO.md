@@ -1,142 +1,46 @@
-# NeuroCare AI - Complete Project Summary
+# Admin Redesign Plan
 
-## Project Overview
-- **Project Name**: NeuroCare AI
-- **Frontend**: React.js
-- **Backend**: Python Flask with SQLAlchemy
-- **Database**: SQLite
-- **Authentication**: JWT (JSON Web Tokens)
+## Task Overview:
+1. Improve the admin design (modern, clean UI)
+2. Fix sidebar to display items in vertical order
+3. Create separate admin profile page with different routes
 
----
+## Files to Edit/Create:
 
-## ✅ COMPLETED COMPONENTS
+### 1. Create AdminProfile.js (NEW FILE)
+- Location: `src/pages/Admin/AdminProfile.js`
+- Purpose: Dedicated admin profile page with settings
 
-### Backend (neurocare-backend/)
-```
-neurocare-backend/
-├── app/
-│   ├── __init__.py          # Flask app factory
-│   ├── config.py            # Configuration
-│   ├── models.py            # Database models (User, Feedback, UserActivity)
-│   ├── routes/
-│   │   ├── auth.py         # Login, Signup, Logout, Refresh
-│   │   ├── users.py        # Profile CRUD, profile picture
-│   │   ├── feedback.py     # Feedback management
-│   │   ├── admin.py        # Admin panel APIs
-│   │   └── chatbot.py      # Stub for AI team
-│   └── utils/
-│       └── decorators.py   # JWT decorators
-├── .env                     # Environment variables
-├── requirements.txt         # Python dependencies
-├── run.py                   # Entry point
-└── README.md              # Documentation
-```
+### 2. Update AdminDashboard.js
+- Improve design with better cards and visuals
+- Fix sidebar vertical layout if needed
 
-### Frontend Pages
-- **Login.js** - Connected to backend with JWT
-- **Signup.js** - User registration
-- **Dashboard.js** - User profile & activity
-- **UpdateProfile.js** - Profile editing
-- **Feedback.js** - Submit & view feedback
-- **Admin/AdminDashboard.js** - Admin statistics
-- **Admin/AdminUsers.js** - User management
-- **Admin/AdminFeedback.js** - Feedback management
+### 3. Update AdminUsers.js
+- Improve table design and UX
 
-### API Services (src/api/)
-- **axiosConfig.js** - JWT interceptors
-- **authService.js** - Authentication
-- **userService.js** - User management
-- **feedbackService.js** - Feedback system
-- **adminService.js** - Admin panel
+### 4. Update AdminFeedback.js
+- Improve feedback cards design
 
-### Features Implemented
-1. ✅ User Registration & Login
-2. ✅ JWT Authentication
-3. ✅ Role-based Access Control (Admin vs User)
-4. ✅ Profile Management with picture upload
-5. ✅ Feedback System
-6. ✅ Admin Panel with:
-   - Dashboard statistics
-   - User management (CRUD)
-   - Feedback management (CRUD)
-7. ✅ Protected Routes
-8. ✅ Chatbot stub endpoint (for AI team)
-9. ✅ Diagnosis stub (for AI team)
+### 5. Update Admin.css
+- Complete redesign with modern UI
+- Fix sidebar to be properly vertical
+- Add new styles for AdminProfile
 
----
+### 6. Update App.js
+- Add route for `/admin/profile`
+- Ensure admin has separate routing after login
 
-## How to Run
+## Design Improvements:
+- Modern dark theme with purple/pink accents
+- Better card layouts with hover effects
+- Improved typography and spacing
+- Responsive design enhancements
+- Professional admin aesthetic
 
-### 1. Backend Setup
-```
-bash
-cd neurocare-backend
-python -m venv venv
-# Windows:
-venv\Scripts\activate
-# Mac/Linux:
-source venv/bin/activate
-pip install -r requirements.txt
-python run.py
-```
+## Steps:
+1. Create AdminProfile.js component
+2. Redesign Admin.css with complete modern styling
+3. Update all admin pages (Dashboard, Users, Feedback) with improved design
+4. Update App.js routes
+5. Test the changes
 
-**Backend runs at:** http://127.0.0.1:5000
-
-### 2. Frontend Setup
-```
-bash
-npm start
-```
-
-**Frontend runs at:** http://localhost:3000
-
----
-
-## Default Admin Account
-| Field | Value |
-|-------|-------|
-| Email | admin@neurocare.ai |
-| Password | admin123 |
-| Username | admin |
-
----
-
-## API Endpoints
-
-### Authentication
-- POST `/api/auth/signup` - Register
-- POST `/api/auth/login` - Login
-- POST `/api/auth/logout` - Logout
-
-### Users
-- GET `/api/users/profile` - Get profile
-- PUT `/api/users/profile` - Update profile
-- POST `/api/users/profile-picture` - Upload picture
-- GET `/api/users/activity` - Get activity
-
-### Feedback
-- POST `/api/feedback` - Submit feedback
-- GET `/api/feedback` - Get my feedback
-- GET `/api/feedback/all` - Admin only
-
-### Admin
-- GET `/api/admin/users` - All users
-- GET `/api/admin/stats` - Dashboard stats
-- DELETE `/api/admin/users/<id>` - Delete user
-
-### Chatbot (Stub)
-- POST `/api/chatbot/chat` - For AI team integration
-
----
-
-## Role-Based Access
-- **Regular Users**: Access to dashboard, profile, feedback, chatbot, diagnosis
-- **Admin Users**: Access to all above + /admin routes with full user & feedback management
-
----
-
-## Notes
-- Chatbot and Diagnosis endpoints are stubs - AI/DLP team will integrate their models
-- All passwords are hashed using bcrypt
-- JWT tokens expire in 24 hours
-- Profile pictures stored in `neurocare-backend/uploads/`

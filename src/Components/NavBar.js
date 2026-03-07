@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
+import authService from "../api/authService";
 
 function NavBar({ isLoggedIn, setIsLoggedIn, user }) {
   const navigate = useNavigate();
@@ -9,11 +10,10 @@ function NavBar({ isLoggedIn, setIsLoggedIn, user }) {
     else document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   };
   
-  const handleLogout = () => { 
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setIsLoggedIn(false); 
-    navigate("/"); 
+  const handleLogout = async () => {
+    await authService.logout();
+    setIsLoggedIn(false);
+    navigate("/");
   };
 
   const isAdmin = user?.is_admin === true;

@@ -169,6 +169,12 @@ def upload_profile_picture():
             
             # Update user profile
             user.profile_picture = f"/uploads/{filename}"
+            activity = UserActivity(
+                user_id=user.id,
+                activity_type='profile_picture_update',
+                description='User updated their profile picture'
+            )
+            db.session.add(activity)
             db.session.commit()
             
             return jsonify({
@@ -229,12 +235,23 @@ def get_activity():
     """Get user activity history"""
     try:
         user_id = get_current_user_id()
-        
-        # Get recent activities (last 20)
-        activities = UserActivity.query.filter_by(user_id=user_id)\
-            .order_by(UserActivity.created_at.desc())\
-            .limit(20)\
-            .all()
+
+        fetch_all = request.args.get('all', 'false').lower() == 'true'
+        activity_type = request.args.get('activity_type')
+        limit = request.args.get('limit', 20, type=int)
+
+        query = UserActivity.query.filter_by(user_id=user_id)
+
+        if activity_type:
+            query = query.filter_by(activity_type=activity_type)
+
+        query = query.order_by(UserActivity.created_at.desc())
+
+        if not fetch_all:
+            safe_limit = 20 if not limit or limit < 1 else min(limit, 200)
+            query = query.limit(safe_limit)
+
+        activities = query.all()
         
         return jsonify({
             'success': True,
@@ -245,5 +262,45 @@ def get_activity():
         return jsonify({
             'success': False,
             'message': 'Failed to get activity',
+            'error': str(e)
+        }), 500
+
+
+@users_bp.route('/activity', methods=['POST'])
+@jwt_required()
+def create_activity():
+    """Create a custom user activity entry"""
+    try:
+        user_id = get_current_user_id()
+        data = request.get_json() or {}
+
+        activity_type = (data.get('activity_type') or '').strip()
+        description = (data.get('description') or '').strip()
+
+        if not activity_type:
+            return jsonify({
+                'success': False,
+                'message': 'activity_type is required'
+            }), 400
+
+        activity = UserActivity(
+            user_id=user_id,
+            activity_type=activity_type[:50],
+            description=description[:200] if description else None
+        )
+        db.session.add(activity)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Activity logged successfully',
+            'activity': activity.to_dict()
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': 'Failed to log activity',
             'error': str(e)
         }), 500

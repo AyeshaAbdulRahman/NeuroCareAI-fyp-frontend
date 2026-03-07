@@ -2,20 +2,33 @@ import React, { useState, useEffect } from "react";
 import "./Styles/Dashboard.css";
 import { useNavigate } from "react-router-dom";
 import userService from "../api/userService";
-import authService from "../api/authService";
 
 function Dashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [activities, setActivities] = useState([]);
+  const [activityLoading, setActivityLoading] = useState(true);
   
   // Profile picture state
   const [profileImage, setProfileImage] = useState(null);
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    fetchUserProfile();
+    const loadDashboardData = async () => {
+      setLoading(true);
+      await Promise.all([fetchUserProfile(), fetchRecentActivities()]);
+      setLoading(false);
+    };
+
+    loadDashboardData();
+
+    const intervalId = setInterval(() => {
+      fetchRecentActivities();
+    }, 30000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   const fetchUserProfile = async () => {
@@ -32,9 +45,74 @@ function Dashboard() {
     } catch (err) {
       setError("Failed to load profile");
       console.error("Error fetching profile:", err);
-    } finally {
-      setLoading(false);
     }
+  };
+
+  const fetchRecentActivities = async () => {
+    setActivityLoading(true);
+    try {
+      const response = await userService.getActivity();
+      if (response.success) {
+        setActivities(response.activities || []);
+      }
+    } catch (err) {
+      console.error("Error fetching activities:", err);
+      setActivities([]);
+    } finally {
+      setActivityLoading(false);
+    }
+  };
+
+  const getActivityIcon = (activityType) => {
+    const iconMap = {
+      login: "bi-box-arrow-in-right",
+      logout: "bi-box-arrow-right",
+      signup: "bi-person-plus",
+      profile_update: "bi-person-gear",
+      profile_picture_update: "bi-image"
+    };
+    return iconMap[activityType] || "bi-clock-history";
+  };
+
+  const getActivityTitle = (activity) => {
+    const titleMap = {
+      login: "Logged in",
+      logout: "Logged out",
+      signup: "Account created",
+      profile_update: "Profile updated",
+      profile_picture_update: "Profile picture updated"
+    };
+    return titleMap[activity.activity_type] || activity.description || "Activity";
+  };
+
+  const getRecentHighlights = () => {
+    const latestLogin = activities.find((activity) => activity.activity_type === "login");
+    const latestProfileUpdate = activities.find((activity) =>
+      ["profile_update", "profile_picture_update"].includes(activity.activity_type)
+    );
+
+    return [
+      latestLogin
+        ? { ...latestLogin, highlightLabel: "Last Login" }
+        : null,
+      latestProfileUpdate
+        ? { ...latestProfileUpdate, highlightLabel: "Last Profile Update" }
+        : null,
+    ].filter(Boolean);
+  };
+
+  const getTimeAgo = (dateString) => {
+    if (!dateString) return "Just now";
+    const seconds = Math.max(
+      1,
+      Math.floor((Date.now() - new Date(dateString).getTime()) / 1000)
+    );
+
+    if (seconds < 60) return "Just now";
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hr ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)} day ago`;
+    return new Date(dateString).toLocaleDateString();
   };
 
   const handleImageChange = async (e) => {
@@ -48,6 +126,7 @@ function Dashboard() {
           // Update localStorage
           const updatedUser = { ...user, profile_picture: response.profile_picture };
           localStorage.setItem('user', JSON.stringify(updatedUser));
+          await fetchRecentActivities();
         }
       } catch (err) {
         console.error("Error uploading image:", err);
@@ -55,11 +134,6 @@ function Dashboard() {
         setUploading(false);
       }
     }
-  };
-
-  const handleLogout = async () => {
-    await authService.logout();
-    navigate("/");
   };
 
   if (loading) {
@@ -77,6 +151,8 @@ function Dashboard() {
       </section>
     );
   }
+
+  const recentHighlights = getRecentHighlights();
 
   return (
     <section className="dashboard">
@@ -138,11 +214,29 @@ function Dashboard() {
 
         <div className="activity-card">
           <h3>Recent Activity</h3>
-          <ul>
-            <li><i className="bi bi-clock-history"></i> Last login: Just now</li>
-            <li><i className="bi bi-file-earmark-text"></i> Welcome to NeuroCare AI!</li>
-            <li><i className="bi bi-person-check"></i> Account verified</li>
-          </ul>
+          {activityLoading ? (
+            <p className="activity-empty">Loading activities...</p>
+          ) : recentHighlights.length === 0 ? (
+            <p className="activity-empty">No recent activities yet.</p>
+          ) : (
+            <ul>
+              {recentHighlights.map((activity) => (
+                <li key={activity.id}>
+                  <div className="activity-title">
+                    <i className={`bi ${getActivityIcon(activity.activity_type)}`}></i>
+                    <span>{activity.highlightLabel}: {getActivityTitle(activity)}</span>
+                  </div>
+                  <small className="activity-time">{getTimeAgo(activity.created_at)}</small>
+                </li>
+              ))}
+            </ul>
+          )}
+          <button
+            className="activity-more-btn"
+            onClick={() => navigate("/activity-details")}
+          >
+            <i className="bi bi-list-ul"></i> More Details
+          </button>
         </div>
       </div>
     </section>

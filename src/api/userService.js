@@ -90,9 +90,9 @@ export const userService = {
   },
 
   // Get user activity history
-  getActivity: async () => {
+  getActivity: async (params = {}) => {
     try {
-      const response = await api.get('/users/activity');
+      const response = await api.get('/users/activity', { params });
       return response.data;
     } catch (error) {
       console.error('Get activity error:', error);
@@ -102,6 +102,23 @@ export const userService = {
         throw { success: false, message: 'Cannot connect to server' };
       } else {
         throw { success: false, message: error.message || 'Failed to get activity' };
+      }
+    }
+  },
+
+  // Create custom user activity
+  logActivity: async (activityData) => {
+    try {
+      const response = await api.post('/users/activity', activityData);
+      return response.data;
+    } catch (error) {
+      console.error('Log activity error:', error);
+      if (error.response) {
+        throw error.response.data || { success: false, message: 'Failed to log activity' };
+      } else if (error.request) {
+        throw { success: false, message: 'Cannot connect to server' };
+      } else {
+        throw { success: false, message: error.message || 'Failed to log activity' };
       }
     }
   }

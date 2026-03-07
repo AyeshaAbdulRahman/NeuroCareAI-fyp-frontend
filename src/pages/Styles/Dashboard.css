@@ -155,12 +155,64 @@
 .activity-card ul {
   list-style: none;
   color: #B6B8D6;
-  line-height: 2;
+  margin: 0;
+  padding: 0;
+}
+
+.activity-card li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.activity-card li:last-child {
+  border-bottom: none;
+}
+
+.activity-title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.activity-empty {
+  color: #B6B8D6;
+  margin: 0;
+  padding-top: 0.5rem;
+}
+
+.activity-time {
+  color: #8f93b5;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.activity-more-btn {
+  margin-top: 1.2rem;
+  width: 100%;
+  border: 1px solid rgba(236, 72, 153, 0.35);
+  background: rgba(255, 255, 255, 0.08);
+  color: #e4e4f7;
+  padding: 0.72rem 1rem;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.activity-more-btn:hover {
+  background: rgba(236, 72, 153, 0.2);
 }
 
 .activity-card li i {
   color: #8B5CF6;
-  margin-right: 8px;
+  margin-right: 0;
 }
 
 /* Responsive */

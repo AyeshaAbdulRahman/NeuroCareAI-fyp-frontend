@@ -13,6 +13,7 @@ import About from "./pages/About";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
+import ActivityDetails from "./pages/ActivityDetails";
 import UpdateProfile from "./pages/UpdateProfile";
 import Feedback from "./pages/Feedback";
 import Chatbot from "./pages/Chatbot";
@@ -98,6 +99,11 @@ function App() {
         <Route path="/dashboard" element={
           <ProtectedRoute>
             <Dashboard user={user} />
+          </ProtectedRoute>
+        } />
+        <Route path="/activity-details" element={
+          <ProtectedRoute>
+            <ActivityDetails />
           </ProtectedRoute>
         } />
         <Route path="/updateprofile" element={
