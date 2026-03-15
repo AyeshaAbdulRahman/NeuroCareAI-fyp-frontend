@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Diagnosis.css";
+import userService from "../../api/userService";
 
 function DiagnosisInput() {
   const navigate = useNavigate();
@@ -23,13 +24,37 @@ function DiagnosisInput() {
     );
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!file && symptoms.length === 0) {
       alert("Please upload an EEG file or select symptoms.");
       return;
     }
+
     setLoading(true);
+
+    if (file) {
+      try {
+        await userService.logActivity({
+          activity_type: "report_upload",
+          description: `Uploaded EEG report file: ${file.name}`,
+        });
+      } catch (err) {
+        console.error("Failed to log report upload activity:", err);
+      }
+    }
+
+    try {
+      await userService.logActivity({
+        activity_type: "diagnosis_submission",
+        description: file
+          ? `Diagnosis submitted with file ${file.name}`
+          : `Diagnosis submitted with ${symptoms.length} selected symptoms`,
+      });
+    } catch (err) {
+      console.error("Failed to log diagnosis submission activity:", err);
+    }
+
     setTimeout(() => navigate("/diagnosis/preprocess"), 1500);
   };
 
