@@ -1,13 +1,22 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
+import authService from "../api/authService";
 
-function NavBar({ isLoggedIn, setIsLoggedIn }) {
+function NavBar({ isLoggedIn, setIsLoggedIn, user }) {
   const navigate = useNavigate();
+  
   const handleScroll = (id) => {
     if (window.location.pathname !== "/") navigate("/", { state: { scrollTo: id } });
     else document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   };
-  const handleLogout = () => { setIsLoggedIn(false); navigate("/"); };
+  
+  const handleLogout = async () => {
+    await authService.logout();
+    setIsLoggedIn(false);
+    navigate("/");
+  };
+
+  const isAdmin = user?.is_admin === true;
 
   return (
     <nav>
@@ -24,9 +33,12 @@ function NavBar({ isLoggedIn, setIsLoggedIn }) {
           </>
         ) : (
           <>
+            {isAdmin && (
+              <li><Link to="/admin"><i className="bi bi-speedometer2"></i> Admin</Link></li>
+            )}
             <li><Link to="/chatbot"><i className="bi bi-chat"></i> Chat Bot</Link></li>
             <li><Link to="/diagnosis"><i className="bi bi-heart"></i> Diagnosis</Link></li>
-            <li><Link to="/dashboard"><i className="bi bi-person"></i> User Profile</Link></li>
+            <li><Link to="/dashboard"><i className="bi bi-person"></i> Profile</Link></li>
             <li><button onClick={handleLogout} className="logout-btn"><i className="bi bi-box-arrow-right"></i> Logout</button></li>
           </>
         )}

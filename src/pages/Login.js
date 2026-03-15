@@ -1,28 +1,52 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import authService from "../api/authService";
 import "./Styles/Login.css";
 
 function Login({ setIsLoggedIn }) {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({ username: "", password: "" });
+  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const { username, password } = formData;
+    const { email, password } = formData;
 
-    if (!username || !password) {
-      alert("Please fill in all fields");
+    if (!email || !password) {
+      setError("Please fill in all fields");
       return;
     }
 
-    // ✅ Simulated login success
-    alert("Login successful!");
-    setIsLoggedIn(true);
-    navigate("/dashboard");
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await authService.login({ email, password });
+      
+      if (response.success) {
+        const user = response.user || null;
+        setIsLoggedIn(user);
+        if (user?.is_admin) {
+          navigate("/admin");
+        } else {
+          navigate("/dashboard");
+        }
+      } else {
+        setError(response.message || "Login failed");
+      }
+    } catch (err) {
+      console.error("Login error caught:", err);
+      // Display the error message from the thrown object
+      setError(err.message || "An error occurred during login");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -36,12 +60,14 @@ function Login({ setIsLoggedIn }) {
             Access your NeuroCare AI dashboard securely.
           </p>
 
+          {error && <div className="error-message">{error}</div>}
+
           <form onSubmit={handleSubmit}>
             <input
-              type="text"
-              name="username"
-              placeholder="Username or Email"
-              value={formData.username}
+              type="email"
+              name="email"
+              placeholder="Email Address"
+              value={formData.email}
               onChange={handleChange}
               required
             />
@@ -54,16 +80,16 @@ function Login({ setIsLoggedIn }) {
               required
             />
 
-            <button type="submit" className="auth-btn">
-              Login
+            <button type="submit" className="auth-btn" disabled={loading}>
+              {loading ? "Logging in..." : "Login"}
             </button>
 
             <div className="text-small">
-              <a href="#">Forgot Password?</a>
+              <button type="button" className="link-button">Forgot Password?</button>
             </div>
 
             <div className="text-small">
-              Don’t have an account? <Link to="/signup">Sign Up</Link>
+              Don't have an account? <Link to="/signup">Sign Up</Link>
             </div>
           </form>
         </div>
@@ -73,3 +99,4 @@ function Login({ setIsLoggedIn }) {
 }
 
 export default Login;
+
