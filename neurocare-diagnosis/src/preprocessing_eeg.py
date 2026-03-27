@@ -81,7 +81,7 @@ import numpy as np
 # ---------------------------
 # 1. Dataset Path
 # ---------------------------
-BASE_DATASET_PATH = r"C:\Users\97150\OneDrive\Desktop\DLP Module\ds004504\derivatives"
+BASE_DATASET_PATH = r"C:\Users\Softxone\Desktop\AyeshaWork\WebDev\react\neurocare-ai\neurocare-diagnosis\ds004504"
 
 # ---------------------------
 # 2. Find all EEG .set files
@@ -124,7 +124,8 @@ def preprocess_eeg(file_path, window_sec=2):
         segment = data[:, start:start+samples]
         windows.append(segment)
     
-    windows = np.array(windows)
+    windows = np.array(windows, dtype=np.float32) 
+    
     
     # Normalize windows (Z-score per channel)
     windows = (windows - windows.mean(axis=2, keepdims=True)) / windows.std(axis=2, keepdims=True)
@@ -142,7 +143,7 @@ for f in eeg_files:
     all_windows.append(windows)
 
 # Concatenate all subjects
-all_windows = np.concatenate(all_windows, axis=0)
+all_windows = np.concatenate(all_windows, axis=0).astype(np.float32)
 print(f"Total windows shape: {all_windows.shape}")  # (total_windows, channels, samples)
 
 # ---------------------------
