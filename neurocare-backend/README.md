@@ -94,12 +94,66 @@ Expected packages:
 - Werkzeug==3.0.1
 - python-dotenv==1.0.0
 - bcrypt==4.1.2
+- pg8000==1.31.2
 
 ### Step 5: Run the Server
 
 ```
 bash
 python run.py
+```
+
+---
+
+## PostgreSQL Migration (SQLite -> PostgreSQL)
+
+Follow these steps to move existing data from `instance/neurocare.db` to PostgreSQL.
+
+### 1) Create PostgreSQL database
+
+Example using `psql`:
+
+```
+sql
+CREATE DATABASE neurocare;
+```
+
+### 2) Update `.env` to PostgreSQL URI
+
+```
+env
+DATABASE_URI=postgresql+pg8000://postgres:your_password@localhost:5432/neurocare
+```
+
+### 3) Run migration script
+
+From `neurocare-backend`:
+
+```
+bash
+python scripts/migrate_sqlite_to_postgres.py --postgres-uri "postgresql+pg8000://postgres:your_password@localhost:5432/neurocare" --force
+```
+
+What this does:
+- Creates a timestamp backup of SQLite DB
+- Truncates PostgreSQL tables (when `--force` is used)
+- Migrates `users`, `feedbacks`, and `user_activities`
+- Resets PostgreSQL ID sequences
+
+### 4) Start backend with PostgreSQL
+
+```
+bash
+python run.py
+```
+
+### 5) Start frontend
+
+From repo root:
+
+```
+bash
+npm start
 ```
 
 ---
