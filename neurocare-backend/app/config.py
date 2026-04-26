@@ -17,6 +17,10 @@ class Config:
     # Database
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URI') or 'sqlite:///neurocare.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # External chatbot service
+    CHATBOT_SERVICE_URL = os.environ.get('CHATBOT_SERVICE_URL') or 'http://127.0.0.1:5001/chat'
+    CHATBOT_TIMEOUT_SECONDS = int(os.environ.get('CHATBOT_TIMEOUT_SECONDS') or 90)
     
     # File uploads
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'uploads')

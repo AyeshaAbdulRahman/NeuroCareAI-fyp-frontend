@@ -8,7 +8,7 @@ A Flask REST API backend for the NeuroCare AI application with JWT authenticatio
 - 👤 **User Management** - Profile CRUD operations, profile picture upload
 - 📝 **Feedback System** - Submit and manage user feedback
 - ⚙️ **Admin Panel** - User management, statistics, feedback moderation
-- 🤖 **Chatbot API** - Stub endpoint for AI chatbot integration
+- 🤖 **Chatbot API** - Session-based chatbot with per-user chat history
 
 ## Tech Stack
 
@@ -32,7 +32,7 @@ neurocare-backend/
 │   │   ├── users.py      # User profile management
 │   │   ├── feedback.py   # Feedback system
 │   │   ├── admin.py      # Admin panel APIs
-│   │   └── chatbot.py    # Chatbot API (stub)
+│   │   └── chatbot.py    # Chatbot API + persistent chat history
 │   └── utils/
 │       ├── decorators.py # Auth decorators
 │       └── __init__.py
@@ -208,7 +208,11 @@ The server will start at: **http://127.0.0.1:5000**
 ### Chatbot (`/api/chatbot`)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/chatbot/chat` | Send message (Stub) |
+| GET | `/api/chatbot/sessions` | List current user's chat sessions |
+| POST | `/api/chatbot/sessions` | Create a new chat session |
+| GET | `/api/chatbot/sessions/<id>/messages` | Get all messages in a session |
+| DELETE | `/api/chatbot/sessions/<id>` | Delete a chat session |
+| POST | `/api/chatbot/chat` | Send message and persist user + bot messages |
 
 ---
 
@@ -287,10 +291,11 @@ npm start
 
 ## Notes
 
-1. **Chatbot & Diagnosis**: These are stub endpoints. The AI/DLP team will integrate the actual functionality.
-2. **Database**: Uses SQLite for development. Can be changed to PostgreSQL for production.
-3. **CORS**: Enabled for all origins in development.
-4. **JWT Tokens**: Access tokens expire in 24 hours.
+1. **Chatbot History**: Chat sessions/messages are stored in PostgreSQL tables `chat_sessions` and `chat_messages`.
+2. **External RAG Service**: Set `CHATBOT_SERVICE_URL` to your chatbot endpoint (default: `http://127.0.0.1:5001/chat`).
+3. **Database**: Uses SQLite for development. Can be changed to PostgreSQL for production.
+4. **CORS**: Enabled for all origins in development.
+5. **JWT Tokens**: Access tokens expire in 24 hours.
 
 ---
 
@@ -316,3 +321,4 @@ python run.py
 ## License
 
 This project is developed for NeuroCare AI.
+

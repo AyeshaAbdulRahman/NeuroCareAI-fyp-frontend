@@ -1,13 +1,34 @@
-import axios from "axios";
+import api from "./axiosConfig";
 
-const BASE_URL = "http://127.0.0.1:5001"; // chatbot backend URL
+const chatService = {
+  listSessions: async () => {
+    const response = await api.get("/chatbot/sessions");
+    return response.data;
+  },
 
-export const sendMessage = async (message) => {
-  try {
-    const response = await axios.post(`${BASE_URL}/chat`, { message });
-    return response.data; // { reply, references }
-  } catch (err) {
-    console.error("API error:", err);
-    return { reply: "Sorry, something went wrong.", references: [] };
-  }
+  createSession: async (title = "New Chat") => {
+    const response = await api.post("/chatbot/sessions", { title });
+    return response.data;
+  },
+
+  getSessionMessages: async (sessionId) => {
+    const response = await api.get(`/chatbot/sessions/${sessionId}/messages`);
+    return response.data;
+  },
+
+  deleteSession: async (sessionId) => {
+    const response = await api.delete(`/chatbot/sessions/${sessionId}`);
+    return response.data;
+  },
+
+  sendMessage: async (message, sessionId = null) => {
+    const payload = { message };
+    if (sessionId) {
+      payload.session_id = sessionId;
+    }
+    const response = await api.post("/chatbot/chat", payload);
+    return response.data;
+  },
 };
+
+export default chatService;

@@ -1,111 +1,186 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { sendMessage } from "../api/chatService"; // make sure this exists
+import chatService from "../api/chatService";
 import "./Styles/Chatbot.css";
 
 function Chatbot() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const [history, setHistory] = useState([]);
+  const [sessions, setSessions] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+
   const chatEndRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const savedChats = JSON.parse(localStorage.getItem("chatHistory")) || [];
-    setHistory(savedChats);
-    if (savedChats.length > 0) {
-      setMessages(savedChats[0].messages);
-      setSelectedChat(savedChats[0].id);
-    } else {
-      startNewChat();
-    }
+    const bootstrap = async () => {
+      setIsLoadingSessions(true);
+      try {
+        const data = await chatService.listSessions();
+        const fetched = Array.isArray(data?.sessions) ? data.sessions : [];
+        if (fetched.length > 0) {
+          setSessions(fetched);
+          const firstSessionId = fetched[0].id;
+          setSelectedChat(firstSessionId);
+          await loadSessionMessages(firstSessionId);
+        } else {
+          await startNewChat();
+        }
+      } catch (error) {
+        console.error("Failed to load sessions:", error);
+      } finally {
+        setIsLoadingSessions(false);
+      }
+    };
+
+    bootstrap();
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("chatHistory", JSON.stringify(history));
-  }, [history]);
-
-  useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, isTyping]);
 
-  const startNewChat = () => {
-    const newChat = {
-      id: Date.now(),
-      title: "New Chat",
-      messages: [
-        { id: 1, sender: "bot", text: "👋 Hello! How can I assist you today?", references: [] },
-      ],
-    };
-    setHistory((prev) => [newChat, ...prev]);
-    setMessages(newChat.messages);
-    setSelectedChat(newChat.id);
+  const refreshSessions = async (preferredSessionId = null) => {
+    const data = await chatService.listSessions();
+    const fetched = Array.isArray(data?.sessions) ? data.sessions : [];
+    setSessions(fetched);
+    if (
+      preferredSessionId &&
+      fetched.some((session) => session.id === preferredSessionId)
+    ) {
+      setSelectedChat(preferredSessionId);
+    }
+    return fetched;
+  };
+
+  const loadSessionMessages = async (sessionId) => {
+    if (!sessionId) {
+      setMessages([]);
+      return;
+    }
+
+    setIsLoadingMessages(true);
+    try {
+      const data = await chatService.getSessionMessages(sessionId);
+      const fetchedMessages = Array.isArray(data?.messages) ? data.messages : [];
+      setMessages(fetchedMessages);
+    } catch (error) {
+      console.error("Failed to load messages:", error);
+      setMessages([]);
+    } finally {
+      setIsLoadingMessages(false);
+    }
+  };
+
+  const startNewChat = async () => {
+    try {
+      const created = await chatService.createSession("New Chat");
+      const session = created?.session;
+      if (!session) {
+        return;
+      }
+      setSessions((prev) => [session, ...prev]);
+      setSelectedChat(session.id);
+      setMessages([]);
+    } catch (error) {
+      console.error("Failed to create new chat session:", error);
+    }
   };
 
   const handleSend = async () => {
-    if (!input.trim()) return;
-    const userMessage = { id: Date.now(), sender: "user", text: input };
+    const messageText = input.trim();
+    if (!messageText || isTyping) {
+      return;
+    }
 
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
     setInput("");
-
-    // Show typing indicator
     setIsTyping(true);
 
+    let activeSessionId = selectedChat;
+    if (!activeSessionId) {
+      try {
+        const created = await chatService.createSession("New Chat");
+        const session = created?.session;
+        if (!session) {
+          throw new Error("Failed to create a chat session.");
+        }
+        activeSessionId = session.id;
+        setSelectedChat(session.id);
+      } catch (error) {
+        console.error("Could not initialize session:", error);
+        setIsTyping(false);
+        return;
+      }
+    }
+
+    const optimisticUserMessage = {
+      id: `temp-${Date.now()}`,
+      sender: "user",
+      message_text: messageText,
+      references: [],
+    };
+    setMessages((prev) => [...prev, optimisticUserMessage]);
+
     try {
-      const result = await sendMessage(userMessage.text);
-
-      const botMessage = {
-        id: Date.now(),
-        sender: "bot",
-        text: result.reply,
-        references: result.references || [],
-      };
-
-      const finalMessages = [...updatedMessages, botMessage];
-      setMessages(finalMessages);
-
-      setHistory((prev) =>
-        prev.map((chat) =>
-          chat.id === selectedChat ? { ...chat, messages: finalMessages } : chat
-        )
-      );
-    } catch (err) {
-      const errorMsg = {
-        id: Date.now(),
-        sender: "bot",
-        text: "❌ Sorry, something went wrong.",
-        references: [],
-      };
-      setMessages((prev) => [...prev, errorMsg]);
+      const result = await chatService.sendMessage(messageText, activeSessionId);
+      const resolvedSessionId = result?.session_id || activeSessionId;
+      await Promise.all([
+        refreshSessions(resolvedSessionId),
+        loadSessionMessages(resolvedSessionId),
+      ]);
+    } catch (error) {
+      console.error("Send message failed:", error);
+      setMessages((prev) => [
+        ...prev.filter((msg) => msg.id !== optimisticUserMessage.id),
+        {
+          id: `err-${Date.now()}`,
+          sender: "bot",
+          message_text: "Sorry, something went wrong.",
+          references: [],
+        },
+      ]);
     } finally {
       setIsTyping(false);
     }
   };
 
-  const loadChat = (chat) => {
+  const loadChat = async (chat) => {
     setSelectedChat(chat.id);
-    setMessages(chat.messages);
+    await loadSessionMessages(chat.id);
   };
 
-  const deleteChat = (id) => {
-    const updated = history.filter((h) => h.id !== id);
-    setHistory(updated);
-    if (selectedChat === id && updated.length > 0) {
-      setMessages(updated[0].messages);
-      setSelectedChat(updated[0].id);
-    } else if (updated.length === 0) {
-      startNewChat();
+  const deleteChat = async (id) => {
+    try {
+      await chatService.deleteSession(id);
+      const remaining = sessions.filter((session) => session.id !== id);
+      setSessions(remaining);
+
+      if (remaining.length === 0) {
+        setSelectedChat(null);
+        setMessages([]);
+        await startNewChat();
+        return;
+      }
+
+      if (selectedChat === id) {
+        const nextSessionId = remaining[0].id;
+        setSelectedChat(nextSessionId);
+        await loadSessionMessages(nextSessionId);
+      }
+    } catch (error) {
+      console.error("Failed to delete session:", error);
     }
   };
 
-  const filteredHistory = history.filter((chat) =>
-    chat.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredSessions = sessions.filter((chat) => {
+    const query = searchTerm.toLowerCase();
+    const searchable = `${chat.title || ""} ${chat.last_message_preview || ""}`.toLowerCase();
+    return searchable.includes(query);
+  });
 
   return (
     <div className="chatbot-layout">
@@ -127,16 +202,16 @@ function Chatbot() {
           />
         </div>
         <div className="chat-history">
-          {filteredHistory.length > 0 ? (
-            filteredHistory.map((chat) => (
+          {isLoadingSessions ? (
+            <p className="no-history">Loading chats...</p>
+          ) : filteredSessions.length > 0 ? (
+            filteredSessions.map((chat) => (
               <div
                 key={chat.id}
-                className={`chat-item ${
-                  selectedChat === chat.id ? "active" : ""
-                }`}
+                className={`chat-item ${selectedChat === chat.id ? "active" : ""}`}
                 onClick={() => loadChat(chat)}
               >
-                <span>{chat.messages[1]?.text.slice(0, 25) || chat.title}</span>
+                <span>{chat.title || "New Chat"}</span>
                 <i
                   className="bi bi-trash3"
                   onClick={(e) => {
@@ -155,27 +230,39 @@ function Chatbot() {
       <main className="chat-main">
         <header className="chat-header">
           <h1>NeuroCare Assistant</h1>
-          <p>Empathetic • Intelligent • Reliable</p>
+          <p>Empathetic | Intelligent | Reliable</p>
         </header>
 
         <div className="chat-body">
-          {messages.map((msg) => (
-            <div key={msg.id} className={`chat-bubble ${msg.sender}`}>
-              <p>{msg.text}</p>
-              {msg.sender === "bot" && msg.references && msg.references.length > 0 && (
-                <div className="chat-references">
-                  <strong>Sources:</strong>
-                  <ul>
-                    {msg.references.map((ref, i) => (
-                      <li key={i}>
-                        Chunk {ref.chunk_id} | Page {ref.page} | {ref.source}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+          {isLoadingMessages ? (
+            <div className="chat-bubble bot">
+              <em>Loading messages...</em>
             </div>
-          ))}
+          ) : messages.length === 0 ? (
+            <div className="chat-bubble bot">
+              <p>Hello. How can I assist you today?</p>
+            </div>
+          ) : (
+            messages.map((msg, index) => (
+              <div key={msg.id || `msg-${index}`} className={`chat-bubble ${msg.sender}`}>
+                <p>{msg.message_text}</p>
+                {msg.sender === "bot" &&
+                  Array.isArray(msg.references) &&
+                  msg.references.length > 0 && (
+                    <div className="chat-references">
+                      <strong>Sources:</strong>
+                      <ul>
+                        {msg.references.map((ref, i) => (
+                          <li key={`${msg.id || index}-${i}`}>
+                            Chunk {ref.chunk_id} | Page {ref.page} | {ref.source}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+              </div>
+            ))
+          )}
           {isTyping && (
             <div className="chat-bubble bot">
               <em>Bot is typing...</em>
