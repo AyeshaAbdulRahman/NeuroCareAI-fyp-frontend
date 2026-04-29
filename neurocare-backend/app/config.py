@@ -1,5 +1,11 @@
 import os
 from datetime import timedelta
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Ensure .env values are available when running `python run.py`
+BASE_DIR = Path(__file__).resolve().parents[1]
+load_dotenv(BASE_DIR / ".env")
 
 class Config:
     """Base configuration"""
@@ -11,6 +17,10 @@ class Config:
     # Database
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URI') or 'sqlite:///neurocare.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # External chatbot service
+    CHATBOT_SERVICE_URL = os.environ.get('CHATBOT_SERVICE_URL') or 'http://127.0.0.1:5001/chat'
+    CHATBOT_TIMEOUT_SECONDS = int(os.environ.get('CHATBOT_TIMEOUT_SECONDS') or 90)
     
     # File uploads
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'uploads')

@@ -1,76 +1,128 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { adminService } from "../../api/adminService";
+import { userService } from "../../api/userService";
 import "./Admin.css";
 
 function AdminSettings() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [settings, setSettings] = useState({
-    siteName: "NeuroCare AI",
-    siteEmail: "admin@neurocare.ai",
-    timezone: "UTC",
-    language: "en",
-    emailNotifications: true,
-    feedbackAlerts: true,
-    userAlerts: true,
-    autoApproveUsers: false,
-    maintenanceMode: false,
-    registrationEnabled: true,
-    sessionTimeout: 60,
-    maxLoginAttempts: 5,
-    requireEmailVerification: true,
-    allowSocialLogin: false,
-    dataRetention: 90,
-    backupFrequency: "daily"
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [stats, setStats] = useState({});
+  const [feedbackCount, setFeedbackCount] = useState(0);
+  const [profile, setProfile] = useState({
+    firstname: "",
+    lastname: "",
+    username: "",
+    country: "",
+    city: "",
+  });
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
 
-  const [successMessage, setSuccessMessage] = useState("");
+  useEffect(() => {
+    fetchSettingsData();
+  }, []);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setSettings(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
+  const fetchSettingsData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const [profileRes, statsRes, feedbackRes] = await Promise.all([
+        userService.getProfile(),
+        adminService.getStats(),
+        adminService.getAllFeedback(),
+      ]);
 
-  const handleSave = (e) => {
-    e.preventDefault();
-    setSuccessMessage("Settings saved successfully!");
-    setTimeout(() => setSuccessMessage(""), 3000);
-  };
-
-  const handleReset = () => {
-    if (window.confirm("Reset all settings to default?")) {
-      setSettings({
-        siteName: "NeuroCare AI",
-        siteEmail: "admin@neurocare.ai",
-        timezone: "UTC",
-        language: "en",
-        emailNotifications: true,
-        feedbackAlerts: true,
-        userAlerts: true,
-        autoApproveUsers: false,
-        maintenanceMode: false,
-        registrationEnabled: true,
-        sessionTimeout: 60,
-        maxLoginAttempts: 5,
-        requireEmailVerification: true,
-        allowSocialLogin: false,
-        dataRetention: 90,
-        backupFrequency: "daily"
+      const user = profileRes?.user || {};
+      setProfile({
+        firstname: user.firstname || "",
+        lastname: user.lastname || "",
+        username: user.username || "",
+        country: user.country || "",
+        city: user.city || "",
       });
+
+      setStats(statsRes || {});
+      const feedbacks = Array.isArray(feedbackRes) ? feedbackRes : feedbackRes?.feedbacks || [];
+      setFeedbackCount(feedbacks.length);
+    } catch (err) {
+      setError(err?.message || "Failed to load settings");
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setProfile((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    try {
+      setError("");
+      await userService.updateProfile(profile);
+      setSuccessMessage("Settings saved successfully.");
+      setTimeout(() => setSuccessMessage(""), 2500);
+    } catch (err) {
+      setError(err?.message || "Failed to save settings");
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setError("New password and confirm password do not match.");
+      return;
+    }
+    if (passwordData.newPassword.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+
+    try {
+      setError("");
+      await userService.updateProfile({ password: passwordData.newPassword });
+      setSuccessMessage("Password updated successfully.");
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setTimeout(() => setSuccessMessage(""), 2500);
+    } catch (err) {
+      setError(err?.message || "Failed to update password");
+    }
+  };
+
+  if (loading) {
+    return <div className="loading">Loading settings...</div>;
+  }
+
   return (
     <div className="admin-layout">
-      {/* Sidebar */}
-      <aside className={`admin-sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
+      <aside className={`admin-sidebar ${sidebarOpen ? "open" : "closed"}`}>
         <div className="sidebar-header">
           <h2>NeuroCare<span>Admin</span></h2>
           <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
-            <i className={`bi ${sidebarOpen ? 'bi-x-lg' : 'bi-list'}`}></i>
+            <i className={`bi ${sidebarOpen ? "bi-x-lg" : "bi-list"}`}></i>
           </button>
         </div>
         <nav className="sidebar-nav">
@@ -109,7 +161,6 @@ function AdminSettings() {
         </nav>
       </aside>
 
-      {/* Main Content */}
       <main className="admin-main">
         <header className="admin-header">
           <h1>System Settings</h1>
@@ -120,250 +171,135 @@ function AdminSettings() {
           </div>
         </header>
 
-        {successMessage && (
-          <div className="success-message">{successMessage}</div>
-        )}
+        {successMessage && <div className="success-message">{successMessage}</div>}
+        {error && <div className="error-message">{error}</div>}
 
-        <form onSubmit={handleSave}>
-          {/* General Settings */}
+        <div className="settings-card">
+          <div className="settings-card-header">
+            <i className="bi bi-graph-up-arrow"></i>
+            <h3>Live System Snapshot</h3>
+          </div>
+          <div className="settings-card-body">
+            <div className="settings-option">
+              <div className="option-info">
+                <p>Total Users</p>
+                <small>{stats?.total_users || 0}</small>
+              </div>
+            </div>
+            <div className="settings-option">
+              <div className="option-info">
+                <p>Active Users</p>
+                <small>{stats?.active_users || 0}</small>
+              </div>
+            </div>
+            <div className="settings-option">
+              <div className="option-info">
+                <p>Total Feedback</p>
+                <small>{feedbackCount}</small>
+              </div>
+            </div>
+            <div className="settings-option">
+              <div className="option-info">
+                <p>Pending Feedback</p>
+                <small>{stats?.pending_feedback || 0}</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <form onSubmit={handleSaveProfile}>
           <div className="settings-card">
             <div className="settings-card-header">
-              <i className="bi bi-globe"></i>
-              <h3>General Settings</h3>
+              <i className="bi bi-person"></i>
+              <h3>Admin Account Preferences</h3>
             </div>
             <div className="settings-card-body">
               <div className="form-row">
                 <div className="form-group">
-                  <label>Site Name</label>
-                  <input
-                    type="text"
-                    name="siteName"
-                    value={settings.siteName}
-                    onChange={handleChange}
-                  />
+                  <label>First Name</label>
+                  <input type="text" name="firstname" value={profile.firstname} onChange={handleChange} required />
                 </div>
                 <div className="form-group">
-                  <label>Site Email</label>
-                  <input
-                    type="email"
-                    name="siteEmail"
-                    value={settings.siteEmail}
-                    onChange={handleChange}
-                  />
+                  <label>Last Name</label>
+                  <input type="text" name="lastname" value={profile.lastname} onChange={handleChange} required />
                 </div>
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label>Timezone</label>
-                  <select name="timezone" value={settings.timezone} onChange={handleChange}>
-                    <option value="UTC">UTC</option>
-                    <option value="EST">EST (Eastern Standard Time)</option>
-                    <option value="PST">PST (Pacific Standard Time)</option>
-                    <option value="GMT">GMT (Greenwich Mean Time)</option>
-                  </select>
+                  <label>Username</label>
+                  <input type="text" name="username" value={profile.username} onChange={handleChange} required />
                 </div>
                 <div className="form-group">
-                  <label>Language</label>
-                  <select name="language" value={settings.language} onChange={handleChange}>
-                    <option value="en">English</option>
-                    <option value="es">Spanish</option>
-                    <option value="fr">French</option>
-                    <option value="de">German</option>
-                  </select>
+                  <label>Country</label>
+                  <input type="text" name="country" value={profile.country} onChange={handleChange} />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>City</label>
+                  <input type="text" name="city" value={profile.city} onChange={handleChange} />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Notification Settings */}
-          <div className="settings-card">
-            <div className="settings-card-header">
-              <i className="bi bi-bell"></i>
-              <h3>Notifications</h3>
-            </div>
-            <div className="settings-card-body">
-              <div className="settings-option">
-                <div className="option-info">
-                  <p>Email Notifications</p>
-                  <small>Receive email notifications for important events</small>
-                </div>
-                <label className="toggle-switch">
-                  <input
-                    type="checkbox"
-                    name="emailNotifications"
-                    checked={settings.emailNotifications}
-                    onChange={handleChange}
-                  />
-                  <span className="slider"></span>
-                </label>
-              </div>
-              <div className="settings-option">
-                <div className="option-info">
-                  <p>Feedback Alerts</p>
-                  <small>Get notified when users submit new feedback</small>
-                </div>
-                <label className="toggle-switch">
-                  <input
-                    type="checkbox"
-                    name="feedbackAlerts"
-                    checked={settings.feedbackAlerts}
-                    onChange={handleChange}
-                  />
-                  <span className="slider"></span>
-                </label>
-              </div>
-              <div className="settings-option">
-                <div className="option-info">
-                  <p>User Alerts</p>
-                  <small>Notifications for new user registrations</small>
-                </div>
-                <label className="toggle-switch">
-                  <input
-                    type="checkbox"
-                    name="userAlerts"
-                    checked={settings.userAlerts}
-                    onChange={handleChange}
-                  />
-                  <span className="slider"></span>
-                </label>
-              </div>
-            </div>
+          <div className="form-actions settings-actions">
+            <button type="submit" className="btn-primary">
+              <i className="bi bi-check-lg"></i> Save Settings
+            </button>
           </div>
+        </form>
 
-          {/* User Management Settings */}
-          <div className="settings-card">
-            <div className="settings-card-header">
-              <i className="bi bi-people"></i>
-              <h3>User Management</h3>
-            </div>
-            <div className="settings-card-body">
-              <div className="settings-option">
-                <div className="option-info">
-                  <p>Auto-approve Users</p>
-                  <small>Automatically approve new user registrations</small>
-                </div>
-                <label className="toggle-switch">
-                  <input
-                    type="checkbox"
-                    name="autoApproveUsers"
-                    checked={settings.autoApproveUsers}
-                    onChange={handleChange}
-                  />
-                  <span className="slider"></span>
-                </label>
-              </div>
-              <div className="settings-option">
-                <div className="option-info">
-                  <p>Allow Registration</p>
-                  <small>Allow new users to register on the platform</small>
-                </div>
-                <label className="toggle-switch">
-                  <input
-                    type="checkbox"
-                    name="registrationEnabled"
-                    checked={settings.registrationEnabled}
-                    onChange={handleChange}
-                  />
-                  <span className="slider"></span>
-                </label>
-              </div>
-              <div className="settings-option">
-                <div className="option-info">
-                  <p>Require Email Verification</p>
-                  <small>Users must verify email before accessing platform</small>
-                </div>
-                <label className="toggle-switch">
-                  <input
-                    type="checkbox"
-                    name="requireEmailVerification"
-                    checked={settings.requireEmailVerification}
-                    onChange={handleChange}
-                  />
-                  <span className="slider"></span>
-                </label>
-              </div>
-              <div className="form-group">
-                <label>Session Timeout (minutes)</label>
-                <select name="sessionTimeout" value={settings.sessionTimeout} onChange={handleChange}>
-                  <option value="15">15 minutes</option>
-                  <option value="30">30 minutes</option>
-                  <option value="60">1 hour</option>
-                  <option value="120">2 hours</option>
-                  <option value="0">Never</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Security Settings */}
+        <form onSubmit={handleChangePassword}>
           <div className="settings-card">
             <div className="settings-card-header">
               <i className="bi bi-shield-lock"></i>
               <h3>Security</h3>
             </div>
             <div className="settings-card-body">
-              <div className="form-group">
-                <label>Max Login Attempts</label>
-                <select name="maxLoginAttempts" value={settings.maxLoginAttempts} onChange={handleChange}>
-                  <option value="3">3 attempts</option>
-                  <option value="5">5 attempts</option>
-                  <option value="10">10 attempts</option>
-                </select>
-              </div>
-              <div className="settings-option">
-                <div className="option-info">
-                  <p>Maintenance Mode</p>
-                  <small>Put the site in maintenance mode</small>
-                </div>
-                <label className="toggle-switch">
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Current Password</label>
                   <input
-                    type="checkbox"
-                    name="maintenanceMode"
-                    checked={settings.maintenanceMode}
-                    onChange={handleChange}
+                    type="password"
+                    name="currentPassword"
+                    value={passwordData.currentPassword}
+                    onChange={handlePasswordChange}
+                    placeholder="Enter current password"
                   />
-                  <span className="slider"></span>
-                </label>
+                </div>
+                <div className="form-group">
+                  <label>New Password</label>
+                  <input
+                    type="password"
+                    name="newPassword"
+                    value={passwordData.newPassword}
+                    onChange={handlePasswordChange}
+                    required
+                    minLength={6}
+                    placeholder="Enter new password"
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Confirm New Password</label>
+                  <input
+                    type="password"
+                    name="confirmPassword"
+                    value={passwordData.confirmPassword}
+                    onChange={handlePasswordChange}
+                    required
+                    placeholder="Confirm new password"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Data Management Settings */}
-          <div className="settings-card">
-            <div className="settings-card-header">
-              <i className="bi bi-database"></i>
-              <h3>Data Management</h3>
-            </div>
-            <div className="settings-card-body">
-              <div className="form-group">
-                <label>Data Retention Period (days)</label>
-                <select name="dataRetention" value={settings.dataRetention} onChange={handleChange}>
-                  <option value="30">30 days</option>
-                  <option value="60">60 days</option>
-                  <option value="90">90 days</option>
-                  <option value="180">180 days</option>
-                  <option value="365">1 year</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Backup Frequency</label>
-                <select name="backupFrequency" value={settings.backupFrequency} onChange={handleChange}>
-                  <option value="hourly">Hourly</option>
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
           <div className="form-actions settings-actions">
-            <button type="button" className="btn-secondary" onClick={handleReset}>
-              <i className="bi bi-arrow-counterclockwise"></i> Reset to Default
-            </button>
             <button type="submit" className="btn-primary">
-              <i className="bi bi-check-lg"></i> Save Settings
+              <i className="bi bi-shield-check"></i> Update Password
             </button>
           </div>
         </form>
@@ -373,4 +309,3 @@ function AdminSettings() {
 }
 
 export default AdminSettings;
-

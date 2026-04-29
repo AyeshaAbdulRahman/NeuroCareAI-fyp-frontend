@@ -1,147 +1,201 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { adminService } from "../../api/adminService";
+import { userService } from "../../api/userService";
 import "./Admin.css";
+
+const iconByType = {
+  user: "person-plus",
+  feedback: "chat-dots",
+  system: "gear",
+  auth: "shield-lock",
+};
+
+const colorByType = {
+  user: "success",
+  feedback: "info",
+  system: "primary",
+  auth: "warning",
+};
+
+const styleColorMap = {
+  success: "var(--admin-success)",
+  warning: "var(--admin-warning)",
+  danger: "var(--admin-danger)",
+  info: "#3B82F6",
+  primary: "var(--admin-primary)",
+};
+
+const normalizeType = (activityType = "") => {
+  const value = activityType.toLowerCase();
+  if (value.includes("login") || value.includes("logout") || value.includes("auth")) return "auth";
+  if (value.includes("feedback")) return "feedback";
+  if (value.includes("profile") || value.includes("setting") || value.includes("password")) return "system";
+  return "user";
+};
+
+const toTitleCase = (text = "") =>
+  text
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const toTimestamp = (value) => {
+  if (!value) return 0;
+  const time = new Date(value).getTime();
+  return Number.isNaN(time) ? 0 : time;
+};
 
 function AdminActivity() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [filter, setFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // Mock activity data
-  const activities = [
-    {
-      id: 1,
-      type: "user",
-      action: "User Registration",
-      description: "New user 'johndoctor' registered as Doctor",
-      admin: "System",
-      timestamp: "2024-01-15 10:30:00",
-      icon: "person-plus",
-      color: "success"
-    },
-    {
-      id: 2,
-      type: "feedback",
-      action: "Feedback Reviewed",
-      description: "Feedback from patient 'janesmith' marked as resolved",
-      admin: "Admin User",
-      timestamp: "2024-01-15 09:45:00",
-      icon: "chat-dots",
-      color: "info"
-    },
-    {
-      id: 3,
-      type: "user",
-      action: "User Updated",
-      description: "Updated profile information for user ID #42",
-      admin: "Admin User",
-      timestamp: "2024-01-15 08:20:00",
-      icon: "pencil",
-      color: "warning"
-    },
-    {
-      id: 4,
-      type: "system",
-      action: "System Backup",
-      description: "Automated daily backup completed successfully",
-      admin: "System",
-      timestamp: "2024-01-15 03:00:00",
-      icon: "cloud-upload",
-      color: "primary"
-    },
-    {
-      id: 5,
-      type: "user",
-      action: "User Deleted",
-      description: "Inactive user account 'olduser123' has been removed",
-      admin: "Admin User",
-      timestamp: "2024-01-14 16:30:00",
-      icon: "trash",
-      color: "danger"
-    },
-    {
-      id: 6,
-      type: "feedback",
-      action: "Feedback Priority Changed",
-      description: "Priority for feedback #15 changed to High",
-      admin: "Admin User",
-      timestamp: "2024-01-14 14:15:00",
-      icon: "flag",
-      color: "warning"
-    },
-    {
-      id: 7,
-      type: "auth",
-      action: "Login",
-      description: "Admin user logged in from new device",
-      admin: "Admin User",
-      timestamp: "2024-01-14 09:00:00",
-      icon: "box-arrow-in-right",
-      color: "success"
-    },
-    {
-      id: 8,
-      type: "settings",
-      action: "Settings Updated",
-      description: "Email notification preferences modified",
-      admin: "Admin User",
-      timestamp: "2024-01-13 15:45:00",
-      icon: "gear",
-      color: "info"
-    },
-    {
-      id: 9,
-      type: "diagnosis",
-      action: "Diagnosis Report Generated",
-      description: "New EEG analysis report generated for patient #28",
-      admin: "System",
-      timestamp: "2024-01-13 12:00:00",
-      icon: "file-earmark-medical",
-      color: "primary"
-    },
-    {
-      id: 10,
-      type: "user",
-      action: "User Status Changed",
-      description: "User 'testpatient' account deactivated",
-      admin: "Admin User",
-      timestamp: "2024-01-12 11:30:00",
-      icon: "person-dash",
-      color: "danger"
+  useEffect(() => {
+    fetchActivityData();
+  }, []);
+
+  const fetchActivityData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const [activityRes, users, feedbackRaw] = await Promise.all([
+        userService.getActivity({ all: true, limit: 100 }),
+        adminService.getAllUsers(1, 200),
+        adminService.getAllFeedback(),
+      ]);
+
+      const feedbacks = Array.isArray(feedbackRaw) ? feedbackRaw : feedbackRaw?.feedbacks || [];
+      const adminEvents = (activityRes?.activities || []).map((entry) => {
+        const type = normalizeType(entry.activity_type);
+        return {
+          id: `admin-${entry.id}`,
+          type,
+          action: toTitleCase(entry.activity_type || "activity"),
+          description: entry.description || "Admin action recorded",
+          admin: "Administrator",
+          timestamp: entry.created_at,
+          icon: iconByType[type] || "activity",
+          color: colorByType[type] || "info",
+        };
+      });
+
+      const userEvents = (users || []).map((item) => ({
+        id: `user-${item.id}`,
+        type: "user",
+        action: "User Registration",
+        description: `New user '${item.username}' joined as ${item.category || "Other"}`,
+        admin: "System",
+        timestamp: item.created_at,
+        icon: "person-plus",
+        color: "success",
+      }));
+
+      const feedbackEvents = (feedbacks || []).flatMap((item) => {
+        const createdEvent = {
+          id: `feedback-created-${item.id}`,
+          type: "feedback",
+          action: "Feedback Submitted",
+          description: `Feedback #${item.id} submitted by ${item.user?.username || "user"}`,
+          admin: "System",
+          timestamp: item.created_at,
+          icon: "chat-dots",
+          color: "info",
+        };
+
+        const statusChanged =
+          item.updated_at &&
+          item.created_at &&
+          toTimestamp(item.updated_at) > toTimestamp(item.created_at) &&
+          item.status &&
+          item.status !== "pending";
+
+        if (!statusChanged) return [createdEvent];
+
+        return [
+          createdEvent,
+          {
+            id: `feedback-updated-${item.id}`,
+            type: "feedback",
+            action: "Feedback Status Updated",
+            description: `Feedback #${item.id} marked as ${item.status}`,
+            admin: "Administrator",
+            timestamp: item.updated_at,
+            icon: "check2-circle",
+            color: "warning",
+          },
+        ];
+      });
+
+      const mergedEvents = [...adminEvents, ...userEvents, ...feedbackEvents]
+        .sort((a, b) => toTimestamp(b.timestamp) - toTimestamp(a.timestamp))
+        .slice(0, 200);
+
+      setActivities(mergedEvents);
+    } catch (err) {
+      setError(err?.message || "Failed to load activity logs");
+    } finally {
+      setLoading(false);
     }
-  ];
-
-  const filteredActivities = activities.filter(activity => {
-    const matchesFilter = filter === "all" || activity.type === filter;
-    const matchesSearch = activity.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         activity.action.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
-
-  const getActivityIcon = (icon) => {
-    return <i className={`bi bi-${icon}`}></i>;
   };
 
-  const getActivityColor = (color) => {
-    const colors = {
-      success: "var(--admin-success)",
-      warning: "var(--admin-warning)",
-      danger: "var(--admin-danger)",
-      info: "#3B82F6",
-      primary: "var(--admin-primary)"
-    };
-    return colors[color] || colors.info;
+  const filteredActivities = useMemo(
+    () =>
+      activities.filter((activity) => {
+        const matchesFilter = filter === "all" || activity.type === filter;
+        const query = searchTerm.toLowerCase();
+        const matchesSearch =
+          activity.description.toLowerCase().includes(query) ||
+          activity.action.toLowerCase().includes(query);
+        return matchesFilter && matchesSearch;
+      }),
+    [activities, filter, searchTerm]
+  );
+
+  const exportLogs = () => {
+    if (!filteredActivities.length) return;
+    const headers = ["Action", "Type", "Description", "By", "Timestamp"];
+    const rows = filteredActivities.map((item) => [
+      item.action,
+      item.type,
+      item.description,
+      item.admin,
+      item.timestamp ? new Date(item.timestamp).toISOString() : "",
+    ]);
+    const csv = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `admin-activity-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
+
+  const getActivityIcon = (icon) => <i className={`bi bi-${icon}`}></i>;
+
+  const getActivityColor = (color) => styleColorMap[color] || styleColorMap.info;
+
+  if (loading) {
+    return <div className="loading">Loading activity logs...</div>;
+  }
 
   return (
     <div className="admin-layout">
-      {/* Sidebar */}
-      <aside className={`admin-sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
+      <aside className={`admin-sidebar ${sidebarOpen ? "open" : "closed"}`}>
         <div className="sidebar-header">
           <h2>NeuroCare<span>Admin</span></h2>
           <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
-            <i className={`bi ${sidebarOpen ? 'bi-x-lg' : 'bi-list'}`}></i>
+            <i className={`bi ${sidebarOpen ? "bi-x-lg" : "bi-list"}`}></i>
           </button>
         </div>
         <nav className="sidebar-nav">
@@ -180,12 +234,11 @@ function AdminActivity() {
         </nav>
       </aside>
 
-      {/* Main Content */}
       <main className="admin-main">
         <header className="admin-header">
           <h1>Activity Logs</h1>
           <div className="header-actions">
-            <button className="btn-icon export-btn" title="Export Logs">
+            <button className="btn-icon export-btn" title="Export Logs" onClick={exportLogs}>
               <i className="bi bi-download"></i> Export
             </button>
             <span className="admin-badge">
@@ -194,10 +247,11 @@ function AdminActivity() {
           </div>
         </header>
 
-        {/* Stats Cards */}
+        {error && <div className="error-message">{error}</div>}
+
         <div className="stats-grid">
           <div className="stat-card">
-            <div className="stat-icon" style={{background: 'rgba(139, 92, 246, 0.2)', color: 'var(--admin-primary)'}}>
+            <div className="stat-icon" style={{ background: "rgba(139, 92, 246, 0.2)", color: "var(--admin-primary)" }}>
               <i className="bi bi-clock-history"></i>
             </div>
             <div className="stat-content">
@@ -206,35 +260,34 @@ function AdminActivity() {
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon" style={{background: 'rgba(16, 185, 129, 0.2)', color: 'var(--admin-success)'}}>
+            <div className="stat-icon" style={{ background: "rgba(16, 185, 129, 0.2)", color: "var(--admin-success)" }}>
               <i className="bi bi-person-plus"></i>
             </div>
             <div className="stat-content">
-              <h3>{activities.filter(a => a.type === 'user').length}</h3>
+              <h3>{activities.filter((a) => a.type === "user").length}</h3>
               <p>User Activities</p>
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon" style={{background: 'rgba(59, 130, 246, 0.2)', color: '#3B82F6'}}>
+            <div className="stat-icon" style={{ background: "rgba(59, 130, 246, 0.2)", color: "#3B82F6" }}>
               <i className="bi bi-chat-dots"></i>
             </div>
             <div className="stat-content">
-              <h3>{activities.filter(a => a.type === 'feedback').length}</h3>
+              <h3>{activities.filter((a) => a.type === "feedback").length}</h3>
               <p>Feedback Activities</p>
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon" style={{background: 'rgba(107, 114, 128, 0.2)', color: '#6B7280'}}>
+            <div className="stat-icon" style={{ background: "rgba(107, 114, 128, 0.2)", color: "#6B7280" }}>
               <i className="bi bi-gear"></i>
             </div>
             <div className="stat-content">
-              <h3>{activities.filter(a => a.type === 'system' || a.type === 'settings').length}</h3>
+              <h3>{activities.filter((a) => a.type === "system" || a.type === "auth").length}</h3>
               <p>System Activities</p>
             </div>
           </div>
         </div>
 
-        {/* Filters */}
         <div className="activity-filters">
           <div className="search-box">
             <i className="bi bi-search"></i>
@@ -246,53 +299,39 @@ function AdminActivity() {
             />
           </div>
           <div className="filter-buttons">
-            <button
-              className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
-              onClick={() => setFilter('all')}
-            >
+            <button className={`filter-btn ${filter === "all" ? "active" : ""}`} onClick={() => setFilter("all")}>
               <i className="bi bi-grid"></i> All
             </button>
-            <button
-              className={`filter-btn ${filter === 'user' ? 'active' : ''}`}
-              onClick={() => setFilter('user')}
-            >
+            <button className={`filter-btn ${filter === "user" ? "active" : ""}`} onClick={() => setFilter("user")}>
               <i className="bi bi-person"></i> Users
             </button>
-            <button
-              className={`filter-btn ${filter === 'feedback' ? 'active' : ''}`}
-              onClick={() => setFilter('feedback')}
-            >
+            <button className={`filter-btn ${filter === "feedback" ? "active" : ""}`} onClick={() => setFilter("feedback")}>
               <i className="bi bi-chat-dots"></i> Feedback
             </button>
-            <button
-              className={`filter-btn ${filter === 'system' ? 'active' : ''}`}
-              onClick={() => setFilter('system')}
-            >
+            <button className={`filter-btn ${filter === "system" ? "active" : ""}`} onClick={() => setFilter("system")}>
               <i className="bi bi-gear"></i> System
             </button>
           </div>
         </div>
 
-        {/* Activity Timeline */}
         <div className="activity-timeline">
           {filteredActivities.length > 0 ? (
-            filteredActivities.map(activity => (
+            filteredActivities.map((activity) => (
               <div key={activity.id} className="timeline-item">
-                <div className="timeline-marker" style={{background: getActivityColor(activity.color)}}>
+                <div className="timeline-marker" style={{ background: getActivityColor(activity.color) }}>
                   {getActivityIcon(activity.icon)}
                 </div>
                 <div className="timeline-content">
                   <div className="timeline-header">
                     <span className="activity-action">{activity.action}</span>
                     <span className="activity-time">
-                      <i className="bi bi-clock"></i> {activity.timestamp}
+                      <i className="bi bi-clock"></i>{" "}
+                      {activity.timestamp ? new Date(activity.timestamp).toLocaleString() : "-"}
                     </span>
                   </div>
                   <p className="activity-description">{activity.description}</p>
                   <div className="timeline-footer">
-                    <span className={`activity-type type-${activity.type}`}>
-                      {activity.type}
-                    </span>
+                    <span className={`activity-type type-${activity.type}`}>{activity.type}</span>
                     <span className="activity-admin">
                       <i className="bi bi-person"></i> {activity.admin}
                     </span>
@@ -313,4 +352,3 @@ function AdminActivity() {
 }
 
 export default AdminActivity;
-

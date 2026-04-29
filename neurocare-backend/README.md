@@ -8,7 +8,7 @@ A Flask REST API backend for the NeuroCare AI application with JWT authenticatio
 - 👤 **User Management** - Profile CRUD operations, profile picture upload
 - 📝 **Feedback System** - Submit and manage user feedback
 - ⚙️ **Admin Panel** - User management, statistics, feedback moderation
-- 🤖 **Chatbot API** - Stub endpoint for AI chatbot integration
+- 🤖 **Chatbot API** - Session-based chatbot with per-user chat history
 
 ## Tech Stack
 
@@ -32,7 +32,7 @@ neurocare-backend/
 │   │   ├── users.py      # User profile management
 │   │   ├── feedback.py   # Feedback system
 │   │   ├── admin.py      # Admin panel APIs
-│   │   └── chatbot.py    # Chatbot API (stub)
+│   │   └── chatbot.py    # Chatbot API + persistent chat history
 │   └── utils/
 │       ├── decorators.py # Auth decorators
 │       └── __init__.py
@@ -94,12 +94,66 @@ Expected packages:
 - Werkzeug==3.0.1
 - python-dotenv==1.0.0
 - bcrypt==4.1.2
+- pg8000==1.31.2
 
 ### Step 5: Run the Server
 
 ```
 bash
 python run.py
+```
+
+---
+
+## PostgreSQL Migration (SQLite -> PostgreSQL)
+
+Follow these steps to move existing data from `instance/neurocare.db` to PostgreSQL.
+
+### 1) Create PostgreSQL database
+
+Example using `psql`:
+
+```
+sql
+CREATE DATABASE neurocare;
+```
+
+### 2) Update `.env` to PostgreSQL URI
+
+```
+env
+DATABASE_URI=postgresql+pg8000://postgres:your_password@localhost:5432/neurocare
+```
+
+### 3) Run migration script
+
+From `neurocare-backend`:
+
+```
+bash
+python scripts/migrate_sqlite_to_postgres.py --postgres-uri "postgresql+pg8000://postgres:your_password@localhost:5432/neurocare" --force
+```
+
+What this does:
+- Creates a timestamp backup of SQLite DB
+- Truncates PostgreSQL tables (when `--force` is used)
+- Migrates `users`, `feedbacks`, and `user_activities`
+- Resets PostgreSQL ID sequences
+
+### 4) Start backend with PostgreSQL
+
+```
+bash
+python run.py
+```
+
+### 5) Start frontend
+
+From repo root:
+
+```
+bash
+npm start
 ```
 
 ---
@@ -154,7 +208,11 @@ The server will start at: **http://127.0.0.1:5000**
 ### Chatbot (`/api/chatbot`)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/chatbot/chat` | Send message (Stub) |
+| GET | `/api/chatbot/sessions` | List current user's chat sessions |
+| POST | `/api/chatbot/sessions` | Create a new chat session |
+| GET | `/api/chatbot/sessions/<id>/messages` | Get all messages in a session |
+| DELETE | `/api/chatbot/sessions/<id>` | Delete a chat session |
+| POST | `/api/chatbot/chat` | Send message and persist user + bot messages |
 
 ---
 
@@ -233,10 +291,11 @@ npm start
 
 ## Notes
 
-1. **Chatbot & Diagnosis**: These are stub endpoints. The AI/DLP team will integrate the actual functionality.
-2. **Database**: Uses SQLite for development. Can be changed to PostgreSQL for production.
-3. **CORS**: Enabled for all origins in development.
-4. **JWT Tokens**: Access tokens expire in 24 hours.
+1. **Chatbot History**: Chat sessions/messages are stored in PostgreSQL tables `chat_sessions` and `chat_messages`.
+2. **External RAG Service**: Set `CHATBOT_SERVICE_URL` to your chatbot endpoint (default: `http://127.0.0.1:5001/chat`).
+3. **Database**: Uses SQLite for development. Can be changed to PostgreSQL for production.
+4. **CORS**: Enabled for all origins in development.
+5. **JWT Tokens**: Access tokens expire in 24 hours.
 
 ---
 
@@ -262,3 +321,4 @@ python run.py
 ## License
 
 This project is developed for NeuroCare AI.
+
