@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import bcrypt
+import json
 
 db = SQLAlchemy()
 
@@ -29,6 +30,7 @@ class User(db.Model):
     # Relationships
     feedbacks = db.relationship('Feedback', backref='user', lazy=True)
     activities = db.relationship('UserActivity', backref='user', lazy=True)
+    chat_sessions = db.relationship('ChatSession', backref='user', lazy=True, cascade='all, delete-orphan')
     
     def set_password(self, password):
         """Hash and set the password"""
@@ -102,3 +104,97 @@ class UserActivity(db.Model):
             'description': self.description,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+
+
+class ChatSession(db.Model):
+    """Per-user chat session for chatbot conversations."""
+    __tablename__ = 'chat_sessions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    title = db.Column(db.String(120), nullable=False, default='New Chat')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    messages = db.relationship(
+        'ChatMessage',
+        backref='session',
+        lazy=True,
+        cascade='all, delete-orphan'
+    )
+
+    def to_dict(self):
+        last_message = None
+        if self.messages:
+            ordered = sorted(self.messages, key=lambda item: item.created_at or datetime.min)
+            last_message = ordered[-1]
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'title': self.title,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'message_count': len(self.messages) if self.messages else 0,
+            'last_message_preview': (
+                (last_message.message_text[:80] + '...') if last_message and len(last_message.message_text) > 80
+                else (last_message.message_text if last_message else '')
+            )
+        }
+
+
+class ChatMessage(db.Model):
+    """A single user/bot message in a chat session."""
+    __tablename__ = 'chat_messages'
+
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('chat_sessions.id'), nullable=False, index=True)
+    sender = db.Column(db.String(20), nullable=False)  # user | bot
+    message_text = db.Column(db.Text, nullable=False)
+    references_json = db.Column(db.Text, default='[]')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    def references(self):
+        try:
+            parsed = json.loads(self.references_json or '[]')
+            return parsed if isinstance(parsed, list) else []
+        except Exception:
+            return []
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'session_id': self.session_id,
+            'sender': self.sender,
+            'message_text': self.message_text,
+            'references': self.references(),
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+class ChatArchive(db.Model):
+    """Archive for chat messages when they exceed max limit per session."""
+    __tablename__ = 'chat_archives'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('chat_sessions.id'), nullable=False, index=True)
+    messages_json = db.Column(db.Text, nullable=False)  # JSON array of archived messages
+    archived_at = db.Column(db.DateTime, default=datetime.utcnow)
+    message_count = db.Column(db.Integer, default=0)
+    
+    def to_dict(self):
+        try:
+            messages = json.loads(self.messages_json or '[]')
+            return {
+                'id': self.id,
+                'session_id': self.session_id,
+                'message_count': self.message_count,
+                'archived_at': self.archived_at.isoformat() if self.archived_at else None,
+                'first_message_preview': messages[0]['message_text'][:50] if messages else ''
+            }
+        except Exception:
+            return {
+                'id': self.id,
+                'session_id': self.session_id,
+                'message_count': self.message_count,
+                'archived_at': self.archived_at.isoformat() if self.archived_at else None
+            }

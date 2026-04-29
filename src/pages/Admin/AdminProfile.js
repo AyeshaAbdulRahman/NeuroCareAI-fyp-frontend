@@ -1,23 +1,29 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { userService } from "../../api/userService";
 import "./Admin.css";
 
 function AdminProfile() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState("profile");
   const [isEditing, setIsEditing] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [recentActivity, setRecentActivity] = useState([]);
   
   const [formData, setFormData] = useState({
     firstname: "",
     lastname: "",
     username: "",
     email: "",
-    phone: "",
-    country: ""
+    country: "",
+    city: "",
+    age: "",
+    gender: "",
+    category: ""
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -32,21 +38,27 @@ function AdminProfile() {
 
   const fetchAdminProfile = async () => {
     try {
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        setUser(JSON.parse(userData));
-        const parsedUser = JSON.parse(userData);
-        setFormData({
-          firstname: parsedUser.firstname || "",
-          lastname: parsedUser.lastname || "",
-          username: parsedUser.username || "",
-          email: parsedUser.email || "",
-          phone: parsedUser.phone || "",
-          country: parsedUser.country || ""
-        });
-      }
+      const [profileRes, activityRes] = await Promise.all([
+        userService.getProfile(),
+        userService.getActivity({ all: true, limit: 10 }),
+      ]);
+
+      const profile = profileRes?.user || profileRes;
+      setUser(profile);
+      setFormData({
+        firstname: profile?.firstname || "",
+        lastname: profile?.lastname || "",
+        username: profile?.username || "",
+        email: profile?.email || "",
+        country: profile?.country || "",
+        city: profile?.city || "",
+        age: profile?.age || "",
+        gender: profile?.gender || "",
+        category: profile?.category || "",
+      });
+      setRecentActivity(activityRes?.activities || []);
     } catch (err) {
-      console.error("Failed to load profile");
+      setError(err?.message || "Failed to load profile");
     } finally {
       setLoading(false);
     }
@@ -65,11 +77,35 @@ function AdminProfile() {
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
     try {
+      setError("");
+      const payload = {
+        firstname: formData.firstname,
+        lastname: formData.lastname,
+        username: formData.username,
+        country: formData.country,
+        city: formData.city,
+      };
+
+      const response = await userService.updateProfile(payload);
+      const updatedUser = response?.user || {};
+      setUser(updatedUser);
+      setFormData((prev) => ({
+        ...prev,
+        firstname: updatedUser.firstname || prev.firstname,
+        lastname: updatedUser.lastname || prev.lastname,
+        username: updatedUser.username || prev.username,
+        email: updatedUser.email || prev.email,
+        country: updatedUser.country || "",
+        city: updatedUser.city || "",
+        age: updatedUser.age || "",
+        gender: updatedUser.gender || "",
+        category: updatedUser.category || "",
+      }));
       setSuccessMessage("Profile updated successfully!");
       setTimeout(() => setSuccessMessage(""), 3000);
       setIsEditing(false);
     } catch (err) {
-      alert("Failed to update profile");
+      setError(err?.message || "Failed to update profile");
     }
   };
 
@@ -84,11 +120,13 @@ function AdminProfile() {
       return;
     }
     try {
+      setError("");
+      await userService.updateProfile({ password: passwordData.newPassword });
       setSuccessMessage("Password changed successfully!");
       setTimeout(() => setSuccessMessage(""), 3000);
       setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
     } catch (err) {
-      alert("Failed to change password");
+      setError(err?.message || "Failed to change password");
     }
   };
 
@@ -131,6 +169,7 @@ function AdminProfile() {
         </header>
 
         {successMessage && <div className="success-message">{successMessage}</div>}
+        {error && <div className="error-message">{error}</div>}
 
         <div className="profile-header">
           <div className="profile-avatar-large">
@@ -191,6 +230,16 @@ function AdminProfile() {
                     <small>Email cannot be changed</small>
                   </div>
                 </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Country</label>
+                    <input type="text" name="country" value={formData.country} onChange={handleInputChange} disabled={!isEditing} />
+                  </div>
+                  <div className="form-group">
+                    <label>City</label>
+                    <input type="text" name="city" value={formData.city} onChange={handleInputChange} disabled={!isEditing} />
+                  </div>
+                </div>
                 {isEditing && (
                   <div className="form-actions">
                     <button type="submit" className="btn-primary"><i className="bi bi-check-lg"></i> Save Changes</button>
@@ -229,14 +278,22 @@ function AdminProfile() {
             <div className="profile-section">
               <div className="section-header"><h3>Recent Activity</h3></div>
               <div className="activity-list">
-                <div className="activity-item">
-                  <div className="activity-icon"><i className="bi bi-person-plus"></i></div>
-                  <div className="activity-details"><p>Updated user profile</p><small>2 hours ago</small></div>
-                </div>
-                <div className="activity-item">
-                  <div className="activity-icon"><i className="bi bi-chat-dots"></i></div>
-                  <div className="activity-details"><p>Reviewed feedback</p><small>5 hours ago</small></div>
-                </div>
+                {recentActivity.length > 0 ? (
+                  recentActivity.map((activity) => (
+                    <div className="activity-item" key={activity.id}>
+                      <div className="activity-icon"><i className="bi bi-activity"></i></div>
+                      <div className="activity-details">
+                        <p>{activity.description || activity.activity_type}</p>
+                        <small>{activity.created_at ? new Date(activity.created_at).toLocaleString() : "-"}</small>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="no-data">
+                    <i className="bi bi-clock-history"></i>
+                    <p>No activity found</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -244,10 +301,30 @@ function AdminProfile() {
           {activeTab === 'settings' && (
             <div className="profile-section">
               <div className="section-header"><h3>Admin Settings</h3></div>
-              <div className="settings-group">
+              <div className="settings-card-body">
                 <div className="settings-option">
-                  <div className="option-info"><p>Email Notifications</p><small>Receive alerts</small></div>
-                  <label className="toggle-switch"><input type="checkbox" defaultChecked /><span className="slider"></span></label>
+                  <div className="option-info">
+                    <p>Role</p>
+                    <small>{user?.is_admin ? "Administrator" : "Standard User"}</small>
+                  </div>
+                </div>
+                <div className="settings-option">
+                  <div className="option-info">
+                    <p>Account Status</p>
+                    <small>{user?.is_active ? "Active" : "Inactive"}</small>
+                  </div>
+                </div>
+                <div className="settings-option">
+                  <div className="option-info">
+                    <p>Category</p>
+                    <small>{formData.category || "-"}</small>
+                  </div>
+                </div>
+                <div className="settings-option">
+                  <div className="option-info">
+                    <p>Created At</p>
+                    <small>{user?.created_at ? new Date(user.created_at).toLocaleString() : "-"}</small>
+                  </div>
                 </div>
               </div>
               <div className="danger-zone">

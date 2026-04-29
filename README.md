@@ -1,53 +1,228 @@
-# Getting Started with Create React App
+# 🧠 NeurocarEAI - Dementia Care Intelligence Platform
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.13.3](https://img.shields.io/badge/Python-3.13.3-green.svg)](https://www.python.org/)
+[![React 19.2.0](https://img.shields.io/badge/React-19.2.0-blue.svg)](https://react.dev/)
+[![Status](https://img.shields.io/badge/Status-Active%20Development-yellow.svg)](#)
 
-## Available Scripts
+## 🎯 Overview
 
-In the project directory, you can run:
+**NeurocarEAI** is an integrated healthcare platform designed to support dementia care through:
 
-### `npm start`
+- 🤖 **Agentic RAG System** - Intelligent Q&A with Mistral AI
+- 📊 **EEG Analysis** - Neurological data processing and ML models
+- 💬 **Smart Chatbot** - Emotion-aware dementia information assistant
+- 👥 **Multi-Role Portal** - Patient, Caregiver, Admin dashboards
+- 🔐 **Secure Backend** - Flask with PostgreSQL
+- ⚡ **Modern Frontend** - React with real-time updates
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+---
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 📁 PROJECT STRUCTURE
 
-### `npm test`
+See [STRUCTURE.md](STRUCTURE.md) for complete folder organization.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+**Quick Overview:**
+```
+neurocare-ai/
+├── frontend/              # React Application
+├── backend/              # Flask REST API
+├── chatbot/agentic-rag/  # Mistral AI RAG System
+├── diagnosis/            # EEG Analysis & ML
+├── shared/               # Shared utilities
+├── tests/                # Test suite
+└── docs/                 # Documentation
+```
 
-### `npm run build`
+---
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## 🚀 QUICK START
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Prerequisites
+- **Python 3.13.3** or higher
+- **Node.js 18.x** or higher
+- **PostgreSQL 12+**
+- **Git**
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### 1️⃣ Clone Repository
 
-### `npm run eject`
+```bash
+git clone https://github.com/yourusername/neurocare-ai.git
+cd neurocare-ai
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### 2️⃣ Setup Environment
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```bash
+# Copy environment template
+cp .env.example .env
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+# Edit .env with your configuration
+nano .env  # or use your editor
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### 3️⃣ Install Dependencies - Frontend
 
-## Learn More
+```bash
+cd frontend
+npm install
+npm start
+# Opens http://localhost:3000
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### 4️⃣ Install Dependencies - Backend
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+```bash
+cd ../backend
+python -m venv venv
 
-### Code Splitting
+# Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+# Install packages
+pip install -r requirements.txt
+
+# Setup database
+flask db upgrade
+python run.py
+# Server runs on http://localhost:5000
+```
+
+#
+## 🏗️ ARCHITECTURE
+
+### System Components
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    React Frontend (3000)                │
+│              Login • Dashboard • Chat • Analysis         │
+└────────────────────────┬────────────────────────────────┘
+                         │ (Axios)
+┌────────────────────────▼────────────────────────────────┐
+│                  Flask Backend (5000)                    │
+│            Auth • API • Database • Webhooks              │
+└────────────────────────┬────────────────────────────────┘
+              ┌──────────┼──────────┐
+              ▼          ▼          ▼
+        ┌─────────┐ ┌────────┐ ┌──────────┐
+        │  RAG    │ │  EEG   │ │Database  │
+        │  (5001) │ │ Models │ │PostgreSQL│
+        └─────────┘ └────────┘ └──────────┘
+              ▼
+        ┌─────────────────────┐
+        │  Mistral AI + Web   │
+        │  Search (Tavily)    │
+        └─────────────────────┘
+```
+
+---
+
+## 🔐 API Endpoints
+
+### Authentication
+- `POST /api/auth/register` - Register user
+- `POST /api/auth/login` - Login
+- `POST /api/auth/refresh` - Refresh token
+- `POST /api/auth/logout` - Logout
+
+### Chat/RAG
+- `POST /api/chat/ask` - Ask a question
+- `GET /api/chat/history` - Get chat history
+- `DELETE /api/chat/{id}` - Delete chat
+
+### Diagnosis
+- `POST /api/diagnosis/analyze` - Analyze EEG
+- `GET /api/diagnosis/results` - Get results
+- `GET /api/diagnosis/reports` - Get reports
+
+---
+
+## 🧪 Testing
+
+### Run All Tests
+```bash
+# Frontend tests
+cd frontend && npm test
+
+# Backend tests
+cd backend && pytest tests/
+
+
+```
+
+---
+
+## 🚢 Deployment
+
+### Docker Deployment
+```bash
+docker-compose up -d
+```
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+### Branch Naming
+- `feature/feature-name` - New features
+- `bugfix/bug-name` - Bug fixes
+- `docs/doc-name` - Documentation
+- `chore/task-name` - Maintenance
+
+### Commit Messages
+```bash
+git commit -m "feat: Add new feature"
+git commit -m "fix: Resolve issue #123"
+git commit -m "docs: Update README"
+```
+
+
+## 📞 Contact
+
+- Email: team@neurocare-ai.com
+- GitHub: https://github.com/yourusername/neurocare-ai
+
+---
+
+**Last Updated**: April 26, 2026  
+**Version**: 0.1.0  
+**Status**: 🟡 Active Development
+
+---
+
+### Quick Commands Reference
+
+```bash
+# Development
+npm start                           # Frontend
+python run.py                       # Backend
+python flask_api.py                 # RAG API
+
+# Testing
+npm test                            # Frontend tests
+pytest tests/                       # Backend tests
+python test_system.py               # RAG tests
+
+# Database
+flask db migrate                    # Create migration
+flask db upgrade                    # Apply migration
+
+# Deployment
+docker-compose up -d                # Deploy with Docker
+git push origin main                # Deploy to production
+```
+
+---
+
+**❤️ Built for Dementia Care Support**
+
+*If this project helped you, please consider giving it a star! ⭐*
 
 ### Analyzing the Bundle Size
 
