@@ -169,3 +169,32 @@ class ChatMessage(db.Model):
             'references': self.references(),
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+
+
+class ChatArchive(db.Model):
+    """Archive for chat messages when they exceed max limit per session."""
+    __tablename__ = 'chat_archives'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('chat_sessions.id'), nullable=False, index=True)
+    messages_json = db.Column(db.Text, nullable=False)  # JSON array of archived messages
+    archived_at = db.Column(db.DateTime, default=datetime.utcnow)
+    message_count = db.Column(db.Integer, default=0)
+    
+    def to_dict(self):
+        try:
+            messages = json.loads(self.messages_json or '[]')
+            return {
+                'id': self.id,
+                'session_id': self.session_id,
+                'message_count': self.message_count,
+                'archived_at': self.archived_at.isoformat() if self.archived_at else None,
+                'first_message_preview': messages[0]['message_text'][:50] if messages else ''
+            }
+        except Exception:
+            return {
+                'id': self.id,
+                'session_id': self.session_id,
+                'message_count': self.message_count,
+                'archived_at': self.archived_at.isoformat() if self.archived_at else None
+            }

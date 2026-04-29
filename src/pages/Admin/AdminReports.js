@@ -1,63 +1,212 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { adminService } from "../../api/adminService";
 import "./Admin.css";
+
+const formatMonth = (date) =>
+  date.toLocaleString("en-US", {
+    month: "short",
+  });
+
+const toTimestamp = (value) => {
+  const time = new Date(value).getTime();
+  return Number.isNaN(time) ? 0 : time;
+};
+
+const toNumber = (value) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+};
 
 function AdminReports() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [dateRange, setDateRange] = useState("30");
+  const [stats, setStats] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // Mock report data
-  const stats = {
-    totalUsers: 1250,
-    totalDoctors: 120,
-    totalCaregivers: 350,
-    totalPatients: 780,
-    activeUsers: 890,
-    newUsersThisMonth: 145,
-    totalFeedback: 320,
-    resolvedFeedback: 280,
-    avgResponseTime: "2.5 hours"
+  useEffect(() => {
+    fetchReportData();
+  }, []);
+
+  const fetchReportData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const [statsRes, usersRes, feedbackRes] = await Promise.all([
+        adminService.getStats(),
+        adminService.getAllUsers(1, 300),
+        adminService.getAllFeedback(),
+      ]);
+
+      setStats(statsRes || {});
+      setUsers(usersRes || []);
+      setFeedbacks(Array.isArray(feedbackRes) ? feedbackRes : feedbackRes?.feedbacks || []);
+    } catch (err) {
+      setError(err?.message || "Failed to load report analytics");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const userGrowthData = [
-    { month: "Jul", users: 450 },
-    { month: "Aug", users: 580 },
-    { month: "Sep", users: 720 },
-    { month: "Oct", users: 850 },
-    { month: "Nov", users: 980 },
-    { month: "Dec", users: 1100 },
-    { month: "Jan", users: 1250 }
-  ];
+  const rangeDays = toNumber(dateRange) || 30;
 
-  const categoryDistribution = [
-    { category: "Patients", count: 780, percentage: 62, color: "#10B981" },
-    { category: "Caregivers", count: 350, percentage: 28, color: "#EC4899" },
-    { category: "Doctors", count: 120, percentage: 10, color: "#8B5CF6" }
-  ];
+  const rangeFilteredUsers = useMemo(() => {
+    const now = Date.now();
+    const msRange = rangeDays * 24 * 60 * 60 * 1000;
+    return users.filter((user) => now - toTimestamp(user.created_at) <= msRange);
+  }, [users, rangeDays]);
 
-  const recentReports = [
-    { id: 1, title: "User Growth Report", date: "2024-01-15", type: "Users" },
-    { id: 2, title: "Feedback Analysis", date: "2024-01-14", type: "Feedback" },
-    { id: 3, title: "System Usage Stats", date: "2024-01-13", type: "System" },
-    { id: 4, title: "Diagnosis Statistics", date: "2024-01-12", type: "Diagnosis" },
-    { id: 5, title: "User Activity Report", date: "2024-01-11", type: "Users" }
-  ];
+  const rangeFilteredFeedback = useMemo(() => {
+    const now = Date.now();
+    const msRange = rangeDays * 24 * 60 * 60 * 1000;
+    return feedbacks.filter((item) => now - toTimestamp(item.created_at) <= msRange);
+  }, [feedbacks, rangeDays]);
 
-  const maxGrowth = Math.max(...userGrowthData.map(d => d.users));
+  const userGrowthData = useMemo(() => {
+    const months = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i -= 1) {
+      const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      const count = users.filter((user) => {
+        const ts = toTimestamp(user.created_at);
+        return ts >= start.getTime() && ts < end.getTime();
+      }).length;
+      months.push({
+        month: formatMonth(start),
+        users: count,
+      });
+    }
+    return months;
+  }, [users]);
+
+  const maxGrowth = Math.max(...userGrowthData.map((d) => d.users), 1);
+
+  const categoryDistribution = useMemo(() => {
+    const totalUsers = toNumber(stats?.total_users);
+    const byCategory = stats?.users_by_category || {};
+    return Object.entries(byCategory)
+      .map(([category, count], index) => {
+        const palette = ["#10B981", "#EC4899", "#8B5CF6", "#F59E0B", "#3B82F6"];
+        const numericCount = toNumber(count);
+        const percentage = totalUsers > 0 ? Math.round((numericCount / totalUsers) * 100) : 0;
+        return {
+          category,
+          count: numericCount,
+          percentage,
+          color: palette[index % palette.length],
+        };
+      })
+      .sort((a, b) => b.count - a.count);
+  }, [stats]);
+
+  const resolvedFeedback = feedbacks.filter((item) => item.status === "resolved").length;
+
+  const avgResponseTime = useMemo(() => {
+    const completed = feedbacks.filter(
+      (item) =>
+        item.status &&
+        item.status !== "pending" &&
+        item.created_at &&
+        item.updated_at &&
+        toTimestamp(item.updated_at) > toTimestamp(item.created_at)
+    );
+    if (!completed.length) return "N/A";
+    const avgMs =
+      completed.reduce((sum, item) => sum + (toTimestamp(item.updated_at) - toTimestamp(item.created_at)), 0) /
+      completed.length;
+    const hours = avgMs / (1000 * 60 * 60);
+    if (hours < 1) return `${Math.max(1, Math.round(hours * 60))} mins`;
+    return `${hours.toFixed(1)} hrs`;
+  }, [feedbacks]);
+
+  const growthRate = useMemo(() => {
+    const now = Date.now();
+    const currentStart = now - rangeDays * 24 * 60 * 60 * 1000;
+    const previousStart = currentStart - rangeDays * 24 * 60 * 60 * 1000;
+    const current = users.filter((u) => {
+      const ts = toTimestamp(u.created_at);
+      return ts >= currentStart && ts <= now;
+    }).length;
+    const previous = users.filter((u) => {
+      const ts = toTimestamp(u.created_at);
+      return ts >= previousStart && ts < currentStart;
+    }).length;
+    if (previous === 0) return current > 0 ? "+100%" : "0%";
+    const pct = ((current - previous) / previous) * 100;
+    return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
+  }, [users, rangeDays]);
+
+  const recentReports = useMemo(
+    () => [
+      {
+        id: 1,
+        title: "User Growth Snapshot",
+        date: new Date().toLocaleDateString(),
+        type: "Users",
+      },
+      {
+        id: 2,
+        title: "Feedback Resolution Snapshot",
+        date: new Date().toLocaleDateString(),
+        type: "Feedback",
+      },
+      {
+        id: 3,
+        title: "Category Distribution Snapshot",
+        date: new Date().toLocaleDateString(),
+        type: "System",
+      },
+      {
+        id: 4,
+        title: "Admin Operations Summary",
+        date: new Date().toLocaleDateString(),
+        type: "Admin",
+      },
+    ],
+    []
+  );
 
   const exportReport = (format) => {
-    alert(`Exporting report as ${format}...`);
+    const lines = [
+      ["Metric", "Value"],
+      ["Total Users", toNumber(stats?.total_users)],
+      ["Active Users", toNumber(stats?.active_users)],
+      [`New Users (Last ${rangeDays} days)`, rangeFilteredUsers.length],
+      ["Total Feedback", feedbacks.length],
+      ["Resolved Feedback", resolvedFeedback],
+      ["Avg Feedback Response", avgResponseTime],
+      ["Growth Rate", growthRate],
+    ];
+
+    const serialized = lines
+      .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const extension = format === "PDF" ? "txt" : "csv";
+    const blob = new Blob([serialized], { type: "text/plain;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `admin-report-${new Date().toISOString().slice(0, 10)}.${extension}`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
+
+  if (loading) return <div className="loading">Loading reports...</div>;
 
   return (
     <div className="admin-layout">
-      {/* Sidebar */}
-      <aside className={`admin-sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
+      <aside className={`admin-sidebar ${sidebarOpen ? "open" : "closed"}`}>
         <div className="sidebar-header">
           <h2>NeuroCare<span>Admin</span></h2>
           <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
-            <i className={`bi ${sidebarOpen ? 'bi-x-lg' : 'bi-list'}`}></i>
+            <i className={`bi ${sidebarOpen ? "bi-x-lg" : "bi-list"}`}></i>
           </button>
         </div>
         <nav className="sidebar-nav">
@@ -96,25 +245,20 @@ function AdminReports() {
         </nav>
       </aside>
 
-      {/* Main Content */}
       <main className="admin-main">
         <header className="admin-header">
           <h1>Reports & Analytics</h1>
           <div className="header-actions">
-            <select 
-              className="date-range-select"
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-            >
+            <select className="date-range-select" value={dateRange} onChange={(e) => setDateRange(e.target.value)}>
               <option value="7">Last 7 days</option>
               <option value="30">Last 30 days</option>
               <option value="90">Last 90 days</option>
               <option value="365">Last year</option>
             </select>
-            <button className="btn-icon" onClick={() => exportReport('PDF')} title="Export PDF">
-              <i className="bi bi-file-earmark-pdf"></i>
+            <button className="btn-icon" onClick={() => exportReport("PDF")} title="Export Summary">
+              <i className="bi bi-file-earmark-text"></i>
             </button>
-            <button className="btn-icon" onClick={() => exportReport('CSV')} title="Export CSV">
+            <button className="btn-icon" onClick={() => exportReport("CSV")} title="Export CSV">
               <i className="bi bi-file-earmark-spreadsheet"></i>
             </button>
             <span className="admin-badge">
@@ -123,14 +267,15 @@ function AdminReports() {
           </div>
         </header>
 
-        {/* Overview Stats */}
+        {error && <div className="error-message">{error}</div>}
+
         <div className="reports-overview">
           <div className="overview-card">
             <div className="overview-icon">
               <i className="bi bi-people-fill"></i>
             </div>
             <div className="overview-content">
-              <h3>{stats.totalUsers.toLocaleString()}</h3>
+              <h3>{toNumber(stats?.total_users).toLocaleString()}</h3>
               <p>Total Users</p>
             </div>
           </div>
@@ -139,7 +284,7 @@ function AdminReports() {
               <i className="bi bi-hospital-fill"></i>
             </div>
             <div className="overview-content">
-              <h3>{stats.totalDoctors}</h3>
+              <h3>{toNumber(stats?.users_by_category?.Doctor)}</h3>
               <p>Doctors</p>
             </div>
           </div>
@@ -148,7 +293,7 @@ function AdminReports() {
               <i className="bi bi-heart-pulse-fill"></i>
             </div>
             <div className="overview-content">
-              <h3>{stats.totalCaregivers}</h3>
+              <h3>{toNumber(stats?.users_by_category?.Caregiver)}</h3>
               <p>Caregivers</p>
             </div>
           </div>
@@ -157,15 +302,13 @@ function AdminReports() {
               <i className="bi bi-person-medical-fill"></i>
             </div>
             <div className="overview-content">
-              <h3>{stats.totalPatients}</h3>
+              <h3>{toNumber(stats?.users_by_category?.Patient)}</h3>
               <p>Patients</p>
             </div>
           </div>
         </div>
 
-        {/* Charts Section */}
         <div className="charts-grid">
-          {/* User Growth Chart */}
           <div className="chart-card">
             <div className="chart-header">
               <h3>User Growth</h3>
@@ -175,11 +318,7 @@ function AdminReports() {
               <div className="bar-chart">
                 {userGrowthData.map((data, index) => (
                   <div key={index} className="bar-item">
-                    <div 
-                      className="bar" 
-                      style={{height: `${(data.users / maxGrowth) * 100}%`}}
-                      title={data.users}
-                    >
+                    <div className="bar" style={{ height: `${(data.users / maxGrowth) * 100}%` }} title={data.users}>
                       <span className="bar-value">{data.users}</span>
                     </div>
                     <span className="bar-label">{data.month}</span>
@@ -189,7 +328,6 @@ function AdminReports() {
             </div>
           </div>
 
-          {/* Category Distribution */}
           <div className="chart-card">
             <div className="chart-header">
               <h3>User Categories</h3>
@@ -197,32 +335,29 @@ function AdminReports() {
             </div>
             <div className="chart-body">
               <div className="pie-chart-container">
-                <div className="pie-chart">
-                  <svg viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#10B981" strokeWidth="20" strokeDasharray="62 38" transform="rotate(-90 50 50)" />
-                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#EC4899" strokeWidth="20" strokeDasharray="28 72" strokeDashoffset="-62" transform="rotate(-90 50 50)" />
-                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#8B5CF6" strokeWidth="20" strokeDasharray="10 90" strokeDashoffset="-90" transform="rotate(-90 50 50)" />
-                  </svg>
-                  <div className="pie-center">
-                    <span>{stats.totalUsers}</span>
-                    <small>Total</small>
-                  </div>
-                </div>
                 <div className="pie-legend">
-                  {categoryDistribution.map((item, index) => (
-                    <div key={index} className="legend-item">
-                      <span className="legend-color" style={{background: item.color}}></span>
-                      <span className="legend-label">{item.category}</span>
-                      <span className="legend-value">{item.count} ({item.percentage}%)</span>
+                  {categoryDistribution.length > 0 ? (
+                    categoryDistribution.map((item, index) => (
+                      <div key={index} className="legend-item">
+                        <span className="legend-color" style={{ background: item.color }}></span>
+                        <span className="legend-label">{item.category}</span>
+                        <span className="legend-value">
+                          {item.count} ({item.percentage}%)
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="no-data">
+                      <i className="bi bi-inbox"></i>
+                      <p>No category data</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Analytics Cards */}
         <div className="analytics-grid">
           <div className="analytics-card">
             <div className="analytics-header">
@@ -232,15 +367,15 @@ function AdminReports() {
             <div className="analytics-stats">
               <div className="analytics-stat">
                 <span className="stat-label">Active Users</span>
-                <span className="stat-value">{stats.activeUsers}</span>
+                <span className="stat-value">{toNumber(stats?.active_users)}</span>
               </div>
               <div className="analytics-stat">
-                <span className="stat-label">New This Month</span>
-                <span className="stat-value positive">+{stats.newUsersThisMonth}</span>
+                <span className="stat-label">New in Range</span>
+                <span className="stat-value positive">+{rangeFilteredUsers.length}</span>
               </div>
               <div className="analytics-stat">
                 <span className="stat-label">Growth Rate</span>
-                <span className="stat-value positive">+12.5%</span>
+                <span className="stat-value positive">{growthRate}</span>
               </div>
             </div>
           </div>
@@ -253,15 +388,15 @@ function AdminReports() {
             <div className="analytics-stats">
               <div className="analytics-stat">
                 <span className="stat-label">Total Feedback</span>
-                <span className="stat-value">{stats.totalFeedback}</span>
+                <span className="stat-value">{feedbacks.length}</span>
               </div>
               <div className="analytics-stat">
                 <span className="stat-label">Resolved</span>
-                <span className="stat-value">{stats.resolvedFeedback}</span>
+                <span className="stat-value">{resolvedFeedback}</span>
               </div>
               <div className="analytics-stat">
                 <span className="stat-label">Avg Response</span>
-                <span className="stat-value">{stats.avgResponseTime}</span>
+                <span className="stat-value">{avgResponseTime}</span>
               </div>
             </div>
           </div>
@@ -273,29 +408,27 @@ function AdminReports() {
             </div>
             <div className="analytics-stats">
               <div className="analytics-stat">
-                <span className="stat-label">Uptime</span>
-                <span className="stat-value positive">99.9%</span>
+                <span className="stat-label">Recent Registrations</span>
+                <span className="stat-value positive">{toNumber(stats?.recent_registrations)}</span>
               </div>
               <div className="analytics-stat">
-                <span className="stat-label">Response Time</span>
-                <span className="stat-value">145ms</span>
+                <span className="stat-label">Pending Feedback</span>
+                <span className="stat-value">{toNumber(stats?.pending_feedback)}</span>
               </div>
               <div className="analytics-stat">
-                <span className="stat-label">API Calls</span>
-                <span className="stat-value">15.2K</span>
+                <span className="stat-label">Feedback in Range</span>
+                <span className="stat-value">{rangeFilteredFeedback.length}</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Recent Reports */}
         <div className="recent-reports">
           <div className="section-header">
             <h3>Recent Reports</h3>
-            <button className="btn-link">View All</button>
           </div>
           <div className="reports-list">
-            {recentReports.map(report => (
+            {recentReports.map((report) => (
               <div key={report.id} className="report-item">
                 <div className="report-icon">
                   <i className="bi bi-file-earmark-text"></i>
@@ -305,7 +438,7 @@ function AdminReports() {
                   <span>{report.date}</span>
                 </div>
                 <span className="report-type">{report.type}</span>
-                <button className="btn-icon">
+                <button className="btn-icon" onClick={() => exportReport("CSV")}>
                   <i className="bi bi-download"></i>
                 </button>
               </div>
@@ -318,4 +451,3 @@ function AdminReports() {
 }
 
 export default AdminReports;
-

@@ -5,7 +5,7 @@ import urllib.request
 
 from flask import Blueprint, current_app, request, jsonify
 from flask_jwt_extended import jwt_required
-from app.models import db, ChatMessage, ChatSession
+from app.models import db, ChatMessage, ChatSession, ChatArchive
 from app.utils.jwt_utils import get_current_user_id
 
 chatbot_bp = Blueprint('chatbot', __name__)
@@ -60,6 +60,7 @@ def _safe_references(raw_references):
 
 
 def _build_rag_history(session_id: int, limit: int = 20):
+    """Build conversation history for RAG context - uses last N messages"""
     rows = (
         ChatMessage.query.filter_by(session_id=session_id)
         .order_by(ChatMessage.created_at.desc())
@@ -73,6 +74,54 @@ def _build_rag_history(session_id: int, limit: int = 20):
         if row.message_text:
             history.append({'role': role, 'content': row.message_text})
     return history
+
+
+def _archive_old_messages(session_id: int, keep_messages: int = 50):
+    """
+    Archive old messages when session exceeds max message count.
+    Keeps the most recent 'keep_messages' messages in active chat.
+    """
+    total_messages = ChatMessage.query.filter_by(session_id=session_id).count()
+    
+    if total_messages <= keep_messages:
+        return False  # No need to archive
+    
+    messages_to_archive = total_messages - keep_messages
+    old_messages = (
+        ChatMessage.query.filter_by(session_id=session_id)
+        .order_by(ChatMessage.created_at.asc())
+        .limit(messages_to_archive)
+        .all()
+    )
+    
+    if not old_messages:
+        return False
+    
+    # Convert to JSON for archiving
+    archived_data = []
+    for msg in old_messages:
+        archived_data.append({
+            'id': msg.id,
+            'sender': msg.sender,
+            'message_text': msg.message_text,
+            'references': msg.references(),
+            'created_at': msg.created_at.isoformat() if msg.created_at else None
+        })
+    
+    # Create archive record
+    archive = ChatArchive(
+        session_id=session_id,
+        messages_json=json.dumps(archived_data),
+        message_count=len(archived_data)
+    )
+    db.session.add(archive)
+    
+    # Delete archived messages from active table
+    for msg in old_messages:
+        db.session.delete(msg)
+    
+    db.session.commit()
+    return True
 
 
 def _call_chatbot_service(message: str, rag_session_key: str, history):
@@ -276,6 +325,9 @@ def send_message():
         
         session.updated_at = datetime.utcnow()
         db.session.commit()
+        
+        # Archive old messages if session exceeds max limit (50 messages)
+        _archive_old_messages(session.id, keep_messages=50)
 
         return jsonify({
             'success': True,
@@ -289,6 +341,76 @@ def send_message():
         return jsonify({
             'success': False,
             'message': 'Failed to process message',
+            'error': str(e)
+        }), 500
+
+
+@chatbot_bp.route('/sessions/<int:session_id>/archives', methods=['GET'])
+@jwt_required()
+def get_session_archives(session_id):
+    """Get archived messages for a session (for viewing older chat history)"""
+    try:
+        user_id = get_current_user_id()
+        session = _ensure_session_owner(user_id, session_id)
+        if not session:
+            return jsonify({
+                'success': False,
+                'message': 'Session not found'
+            }), 404
+
+        archives = (
+            ChatArchive.query.filter_by(session_id=session.id)
+            .order_by(ChatArchive.archived_at.desc())
+            .all()
+        )
+        return jsonify({
+            'success': True,
+            'archives': [archive.to_dict() for archive in archives]
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': 'Failed to fetch archives',
+            'error': str(e)
+        }), 500
+
+
+@chatbot_bp.route('/sessions/<int:session_id>/archives/<int:archive_id>/messages', methods=['GET'])
+@jwt_required()
+def get_archive_messages(session_id, archive_id):
+    """Get detailed messages from a specific archive"""
+    try:
+        user_id = get_current_user_id()
+        session = _ensure_session_owner(user_id, session_id)
+        if not session:
+            return jsonify({
+                'success': False,
+                'message': 'Session not found'
+            }), 404
+
+        archive = ChatArchive.query.filter_by(id=archive_id, session_id=session.id).first()
+        if not archive:
+            return jsonify({
+                'success': False,
+                'message': 'Archive not found'
+            }), 404
+
+        try:
+            messages = json.loads(archive.messages_json or '[]')
+            return jsonify({
+                'success': True,
+                'archive': archive.to_dict(),
+                'messages': messages
+            }), 200
+        except json.JSONDecodeError:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to parse archived messages'
+            }), 500
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': 'Failed to fetch archive messages',
             'error': str(e)
         }), 500
 
