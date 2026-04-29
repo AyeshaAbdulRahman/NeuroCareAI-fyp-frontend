@@ -3,51 +3,138 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.13.3](https://img.shields.io/badge/Python-3.13.3-green.svg)](https://www.python.org/)
 [![React 19.2.0](https://img.shields.io/badge/React-19.2.0-blue.svg)](https://react.dev/)
-[![Status](https://img.shields.io/badge/Status-Active%20Development-yellow.svg)](#)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-12+-green.svg)](#)
 
-## 🎯 Overview
+## 📋 Overview
 
-**NeurocarEAI** is an integrated healthcare platform designed to support dementia care through:
-
-- 🤖 **Agentic RAG System** - Intelligent Q&A with Mistral AI
-- 📊 **EEG Analysis** - Neurological data processing and ML models
-- 💬 **Smart Chatbot** - Emotion-aware dementia information assistant
-- 👥 **Multi-Role Portal** - Patient, Caregiver, Admin dashboards
-- 🔐 **Secure Backend** - Flask with PostgreSQL
-- ⚡ **Modern Frontend** - React with real-time updates
-
----
-
-## 📁 PROJECT STRUCTURE
-
-See [STRUCTURE.md](STRUCTURE.md) for complete folder organization.
-
-**Quick Overview:**
-```
-neurocare-ai/
-├── frontend/              # React Application
-├── backend/              # Flask REST API
-├── chatbot/agentic-rag/  # Mistral AI RAG System
-├── diagnosis/            # EEG Analysis & ML
-├── shared/               # Shared utilities
-├── tests/                # Test suite
-└── docs/                 # Documentation
-```
+**NeurocarEAI** is an integrated healthcare platform for dementia care with:
+- 💬 Smart chatbot with persistent chat history
+- 👥 Multi-role authentication (Patient, Caregiver, Admin)
+- 🔐 Secure JWT-based backend with Flask
+- 📊 EEG data analysis and ML models
+- 💾 PostgreSQL database integration
 
 ---
 
 ## 🚀 QUICK START
 
 ### Prerequisites
-- **Python 3.13.3** or higher
-- **Node.js 18.x** or higher
-- **PostgreSQL 12+**
-- **Git**
+- Python 3.8+ 
+- Node.js 18+
+- PostgreSQL 12+
+- Git
 
-### 1️⃣ Clone Repository
+### 1️⃣ Setup Backend
 
 ```bash
-git clone https://github.com/yourusername/neurocare-ai.git
+cd neurocare-backend
+
+# Create virtual environment
+python -m venv venv
+venv\Scripts\activate  # Windows
+# source venv/bin/activate  # Mac/Linux
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Create .env file
+echo FLASK_APP=run.py > .env
+echo FLASK_ENV=development >> .env
+echo DATABASE_URL=postgresql://user:password@localhost:5432/neurocare_db >> .env
+echo JWT_SECRET_KEY=your_secret_key >> .env
+
+# Initialize database
+python init_db.py
+
+# Run backend
+python run.py  # Runs on http://localhost:5000
+```
+
+### 2️⃣ Setup Frontend
+
+```bash
+cd ..
+
+# Install dependencies
+npm install
+
+# Create .env file (root directory)
+echo REACT_APP_API_URL=http://localhost:5000 > .env
+
+# Start React app
+npm start  # Runs on http://localhost:3000
+```
+
+### 3️⃣ Database Setup
+
+```bash
+# PostgreSQL - Create database
+createdb neurocare_db
+
+# Or using psql
+psql -U postgres
+CREATE DATABASE neurocare_db;
+```
+
+---
+
+## 📁 PROJECT STRUCTURE
+
+```
+neurocare-ai/
+├── src/                      # React components & pages
+├── neurocare-backend/        # Flask REST API
+│   ├── app/
+│   │   ├── routes/          # Auth, Users, Chatbot, Admin
+│   │   ├── models.py        # Database models
+│   │   └── config.py        # Configuration
+│   └── requirements.txt
+├── neurocare-diagnosis/      # EEG analysis & datasets
+├── public/                   # Static assets
+└── package.json
+```
+
+---
+
+## 🔑 Key Features
+
+| Feature | Location |
+|---------|----------|
+| Authentication & Users | `/neurocare-backend/app/routes/auth.py` |
+| Chatbot API | `/neurocare-backend/app/routes/chatbot.py` |
+| Admin Panel | `/neurocare-backend/app/routes/admin.py` |
+| React Components | `/src/Components/` |
+| EEG Analysis | `/neurocare-diagnosis/src/` |
+
+---
+
+## 🧪 Testing
+
+```bash
+# Backend tests
+cd neurocare-backend
+python test_backend.py
+
+# Frontend tests
+npm test
+```
+
+---
+
+## 🔧 Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Port 5000 already in use | Change `FLASK_PORT` in `.env` |
+| Database connection failed | Check PostgreSQL is running & .env DATABASE_URL |
+| React app won't start | Delete `node_modules`, run `npm install` again |
+| JWT errors | Regenerate `JWT_SECRET_KEY` in .env |
+
+---
+
+## 📞 Support
+
+For issues, check [STRUCTURE.md](STRUCTURE.md) for detailed documentation.
 cd neurocare-ai
 ```
 
