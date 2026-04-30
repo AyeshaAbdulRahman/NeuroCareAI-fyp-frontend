@@ -5,7 +5,7 @@
 [![React 19.2.0](https://img.shields.io/badge/React-19.2.0-blue.svg)](https://react.dev/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-12+-green.svg)](#)
 
-## 📋 Overview
+##  Overview
 
 **NeurocarEAI** is an integrated healthcare platform for dementia care with:
 - 💬 Smart chatbot with persistent chat history

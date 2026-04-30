@@ -1,11 +1,10 @@
 from datetime import datetime
 import json
-import urllib.error
-import urllib.request
 
 from flask import Blueprint, current_app, request, jsonify
 from flask_jwt_extended import jwt_required
 from app.models import db, ChatMessage, ChatSession, ChatArchive
+from app.services.chatbot_service import ChatbotServiceError, get_chatbot_service
 from app.utils.jwt_utils import get_current_user_id
 
 chatbot_bp = Blueprint('chatbot', __name__)
@@ -51,12 +50,6 @@ def _generate_summary_title(text: str, max_words: int = 2) -> str:
 def _ensure_session_owner(user_id: int, session_id: int):
     session = ChatSession.query.filter_by(id=session_id, user_id=user_id).first()
     return session
-
-
-def _safe_references(raw_references):
-    if isinstance(raw_references, list):
-        return raw_references
-    return []
 
 
 def _build_rag_history(session_id: int, limit: int = 20):
@@ -122,29 +115,6 @@ def _archive_old_messages(session_id: int, keep_messages: int = 50):
     
     db.session.commit()
     return True
-
-
-def _call_chatbot_service(message: str, rag_session_key: str, history):
-    service_url = current_app.config.get('CHATBOT_SERVICE_URL')
-    timeout_seconds = int(current_app.config.get('CHATBOT_TIMEOUT_SECONDS', 90))
-    payload = {
-        'message': message,
-        'session_id': rag_session_key,
-        'history': history
-    }
-    req = urllib.request.Request(
-        service_url,
-        data=json.dumps(payload).encode('utf-8'),
-        headers={'Content-Type': 'application/json'},
-        method='POST'
-    )
-    with urllib.request.urlopen(req, timeout=timeout_seconds) as response:
-        response_data = response.read().decode('utf-8')
-    parsed = json.loads(response_data) if response_data else {}
-    return {
-        'reply': parsed.get('reply') or 'I could not generate a response at this time.',
-        'references': _safe_references(parsed.get('references'))
-    }
 
 
 @chatbot_bp.route('/sessions', methods=['GET'])
@@ -257,6 +227,7 @@ def delete_session(session_id):
 def send_message():
     try:
         user_id = get_current_user_id()
+        chatbot_service = get_chatbot_service()
         data = request.get_json() or {}
         user_text = (data.get('message') or '').strip()
         if not user_text:
@@ -300,14 +271,14 @@ def send_message():
 
         rag_session_key = f"user:{user_id}:session:{session.id}"
         try:
-            rag_output = _call_chatbot_service(
+            rag_output = chatbot_service.chat(
                 message=user_text,
-                rag_session_key=rag_session_key,
+                session_id=rag_session_key,
                 history=existing_history
             )
             bot_text = rag_output['reply']
             references = rag_output['references']
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, ValueError):
+        except ChatbotServiceError:
             bot_text = 'Chatbot service is unavailable right now. Please try again in a moment.'
             references = []
 
@@ -418,8 +389,25 @@ def get_archive_messages(session_id, archive_id):
 @chatbot_bp.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint for chatbot service"""
+    service = get_chatbot_service()
+    rag_status = {
+        'status': 'unavailable',
+        'url': current_app.config.get('CHATBOT_SERVICE_URL')
+    }
+
+    try:
+        upstream = service.health()
+        rag_status = {
+            'status': upstream.get('status', 'healthy'),
+            'message': upstream.get('message', 'External chatbot service is reachable'),
+            'url': current_app.config.get('CHATBOT_SERVICE_URL')
+        }
+    except ChatbotServiceError:
+        pass
+
     return jsonify({
         'success': True,
-        'message': 'Chatbot service is running',
-        'status': 'active'
+        'message': 'Chatbot API route is running',
+        'status': 'active',
+        'rag_service': rag_status
     }), 200
