@@ -59,6 +59,16 @@ export const adminService = {
     }
   },
 
+  // Get activity logs (Admin)
+  getActivityLogs: async (params = {}) => {
+    try {
+      const response = await api.get('/admin/activity', { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { success: false, message: 'Failed to get activity logs' };
+    }
+  },
+
   // Get all feedback (Admin)
   getAllFeedback: async () => {
     try {

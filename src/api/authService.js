@@ -7,6 +7,11 @@ export const authService = {
       const response = await api.post('/auth/signup', userData);
       if (response.data.success && response.data.token) {
         localStorage.setItem('token', response.data.token);
+        if (response.data.refresh_token) {
+          localStorage.setItem('refresh_token', response.data.refresh_token);
+        } else {
+          localStorage.removeItem('refresh_token');
+        }
         localStorage.setItem('user', JSON.stringify(response.data.user));
       }
       return response.data;
@@ -36,6 +41,11 @@ export const authService = {
       const response = await api.post('/auth/login', credentials);
       if (response.data.success && response.data.token) {
         localStorage.setItem('token', response.data.token);
+        if (response.data.refresh_token) {
+          localStorage.setItem('refresh_token', response.data.refresh_token);
+        } else {
+          localStorage.removeItem('refresh_token');
+        }
         localStorage.setItem('user', JSON.stringify(response.data.user));
       }
       return response.data;
@@ -67,6 +77,7 @@ export const authService = {
       console.error('Logout error:', error);
     } finally {
       localStorage.removeItem('token');
+      localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
     }
   },
@@ -92,6 +103,7 @@ export const authService = {
       return response.data;
     } catch (error) {
       localStorage.removeItem('token');
+      localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
       throw error;
     }

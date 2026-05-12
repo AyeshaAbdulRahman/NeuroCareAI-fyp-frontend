@@ -94,7 +94,7 @@ function Signup({ setIsLoggedIn }) {
       const response = await authService.signup(userData);
 
       if (response.success) {
-        setIsLoggedIn(true);
+        setIsLoggedIn(response.user || userData);
         navigate("/dashboard");
       } else {
         setError(response.message || "Registration failed");

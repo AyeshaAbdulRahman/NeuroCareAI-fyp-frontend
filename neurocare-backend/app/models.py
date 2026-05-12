@@ -56,8 +56,8 @@ class User(db.Model):
             'profile_picture': self.profile_picture,
             'is_admin': self.is_admin,
             'is_active': self.is_active,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+            'created_at': self.created_at.isoformat() + 'Z' if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() + 'Z' if self.updated_at else None
         }
 
 
@@ -79,8 +79,8 @@ class Feedback(db.Model):
             'user_id': self.user_id,
             'feedback_text': self.feedback_text,
             'status': self.status,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'created_at': self.created_at.isoformat() + 'Z' if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() + 'Z' if self.updated_at else None,
             'user': self.user.to_dict() if self.user else None
         }
 
@@ -95,15 +95,27 @@ class UserActivity(db.Model):
     description = db.Column(db.String(200))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    def to_dict(self):
+    def to_dict(self, include_user=False):
         """Convert activity to dictionary"""
-        return {
+        data = {
             'id': self.id,
             'user_id': self.user_id,
             'activity_type': self.activity_type,
             'description': self.description,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'created_at': self.created_at.isoformat() + 'Z' if self.created_at else None
         }
+
+        if include_user and self.user:
+            data['user'] = {
+                'id': self.user.id,
+                'username': self.user.username,
+                'email': self.user.email,
+                'firstname': self.user.firstname,
+                'lastname': self.user.lastname,
+                'is_admin': self.user.is_admin,
+            }
+
+        return data
 
 
 class ChatSession(db.Model):
@@ -132,8 +144,8 @@ class ChatSession(db.Model):
             'id': self.id,
             'user_id': self.user_id,
             'title': self.title,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'created_at': self.created_at.isoformat() + 'Z' if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() + 'Z' if self.updated_at else None,
             'message_count': len(self.messages) if self.messages else 0,
             'last_message_preview': (
                 (last_message.message_text[:80] + '...') if last_message and len(last_message.message_text) > 80
@@ -167,7 +179,7 @@ class ChatMessage(db.Model):
             'sender': self.sender,
             'message_text': self.message_text,
             'references': self.references(),
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'created_at': self.created_at.isoformat() + 'Z' if self.created_at else None
         }
 
 

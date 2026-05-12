@@ -12,6 +12,7 @@ const activityFilters = [
   { value: "profile_picture_update", label: "Profile Picture Updates" },
   { value: "report_upload", label: "Report Uploads" },
   { value: "diagnosis_submission", label: "Diagnosis Submissions" },
+  { value: "feedback_submitted", label: "Feedback Submitted" },
 ];
 
 function ActivityDetails() {
@@ -58,6 +59,9 @@ function ActivityDetails() {
       profile_picture_update: "bi-image",
       report_upload: "bi-file-earmark-arrow-up",
       diagnosis_submission: "bi-activity",
+      feedback_submitted: "bi-chat-dots",
+      feedback_deleted: "bi-trash",
+      account_deactivated: "bi-person-dash",
     };
     return iconMap[activityType] || "bi-clock-history";
   };
@@ -71,13 +75,23 @@ function ActivityDetails() {
       profile_picture_update: "Profile Picture Updated",
       report_upload: "Report Uploaded",
       diagnosis_submission: "Diagnosis Submitted",
+      feedback_submitted: "Feedback Submitted",
+      feedback_deleted: "Feedback Deleted",
+      account_deactivated: "Account Deactivated",
     };
     return titleMap[activity.activity_type] || "Activity";
   };
 
   const formatDateTime = (dateString) => {
     if (!dateString) return "Unknown time";
-    return new Date(dateString).toLocaleString();
+    
+    // Ensure the timestamp has UTC indicator
+    let fullDateString = dateString;
+    if (!dateString.endsWith('Z')) {
+      fullDateString = dateString + 'Z';
+    }
+    
+    return new Date(fullDateString).toLocaleString();
   };
 
   return (

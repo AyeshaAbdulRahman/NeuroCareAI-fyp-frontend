@@ -36,10 +36,13 @@ import "./App.css";
 // Protected Route Component
 function ProtectedRoute({ children, requireAdmin = false }) {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const tokenValue = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
+    setToken(tokenValue);
     if (userData) {
       setUser(JSON.parse(userData));
     }
@@ -50,7 +53,7 @@ function ProtectedRoute({ children, requireAdmin = false }) {
     return <div className="loading">Loading...</div>;
   }
 
-  if (!user) {
+  if (!token || !user) {
     return <Navigate to="/login" replace />;
   }
 

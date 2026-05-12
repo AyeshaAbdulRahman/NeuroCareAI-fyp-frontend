@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 from app.models import db, Feedback, User
+from app.utils.activity import log_user_activity
 from app.utils.jwt_utils import get_current_user_id
 
 feedback_bp = Blueprint('feedback', __name__)
@@ -28,6 +29,12 @@ def submit_feedback():
         )
         
         db.session.add(new_feedback)
+        db.session.flush()
+        log_user_activity(
+            user_id,
+            'feedback_submitted',
+            f'Submitted feedback #{new_feedback.id}'
+        )
         db.session.commit()
         
         return jsonify({
@@ -122,11 +129,18 @@ def update_feedback(feedback_id):
             }), 404
         
         data = request.get_json()
+        previous_status = feedback.status
         
         if 'status' in data:
             if data['status'] in ['pending', 'reviewed', 'resolved']:
                 feedback.status = data['status']
         
+        if feedback.status != previous_status:
+            log_user_activity(
+                user_id,
+                'feedback_status_updated',
+                f'Updated feedback #{feedback.id} status from {previous_status} to {feedback.status}'
+            )
         db.session.commit()
         
         return jsonify({
@@ -167,6 +181,12 @@ def delete_feedback(feedback_id):
                 'message': 'Permission denied'
             }), 403
         
+        actor_description = (
+            f'Deleted feedback #{feedback.id} for user {feedback.user.username}'
+            if user and user.is_admin and feedback.user
+            else f'Deleted feedback #{feedback.id}'
+        )
+        log_user_activity(user_id, 'feedback_deleted', actor_description)
         db.session.delete(feedback)
         db.session.commit()
         

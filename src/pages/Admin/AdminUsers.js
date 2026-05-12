@@ -139,7 +139,11 @@ function AdminUsers() {
             </div>
             <div className="stat-content">
               <h3>{users.filter(u => {
-                const created = new Date(u.created_at);
+                let dateString = u.created_at;
+                if (!dateString.endsWith('Z')) {
+                  dateString = dateString + 'Z';
+                }
+                const created = new Date(dateString);
                 const now = new Date();
                 const diff = (now - created) / (1000 * 60 * 60 * 24);
                 return diff <= 30;
@@ -237,7 +241,7 @@ function AdminUsers() {
                         {user.is_active ? 'Active' : 'Inactive'}
                       </button>
                     </td>
-                    <td>{user.created_at ? new Date(user.created_at).toLocaleDateString() : '-'}</td>
+                    <td>{user.created_at ? new Date((user.created_at.endsWith('Z') ? user.created_at : user.created_at + 'Z')).toLocaleDateString() : '-'}</td>
                     <td>
                       <div className="action-buttons">
                         <button

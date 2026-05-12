@@ -4,6 +4,7 @@ from werkzeug.utils import secure_filename
 import os
 import uuid
 from app.models import db, User, UserActivity
+from app.utils.activity import log_user_activity
 from app.utils.decorators import validate_email, validate_username
 from app.utils.jwt_utils import get_current_user_id
 
@@ -94,15 +95,7 @@ def update_profile():
         if 'password' in data and data['password']:
             user.set_password(data['password'])
         
-        db.session.commit()
-        
-        # Log activity
-        activity = UserActivity(
-            user_id=user.id,
-            activity_type='profile_update',
-            description='User updated their profile'
-        )
-        db.session.add(activity)
+        log_user_activity(user.id, 'profile_update', 'User updated their profile')
         db.session.commit()
         
         return jsonify({
@@ -169,12 +162,11 @@ def upload_profile_picture():
             
             # Update user profile
             user.profile_picture = f"/uploads/{filename}"
-            activity = UserActivity(
-                user_id=user.id,
-                activity_type='profile_picture_update',
-                description='User updated their profile picture'
+            log_user_activity(
+                user.id,
+                'profile_picture_update',
+                'User updated their profile picture'
             )
-            db.session.add(activity)
             db.session.commit()
             
             return jsonify({
@@ -213,6 +205,7 @@ def delete_account():
         
         # Soft delete - just deactivate
         user.is_active = False
+        log_user_activity(user.id, 'account_deactivated', 'User deactivated their account')
         db.session.commit()
         
         return jsonify({
@@ -239,23 +232,35 @@ def get_activity():
         fetch_all = request.args.get('all', 'false').lower() == 'true'
         activity_type = request.args.get('activity_type')
         limit = request.args.get('limit', 20, type=int)
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', limit if limit and limit > 0 else 20, type=int)
+        safe_per_page = 20 if not per_page or per_page < 1 else min(per_page, 200)
 
         query = UserActivity.query.filter_by(user_id=user_id)
 
         if activity_type:
             query = query.filter_by(activity_type=activity_type)
 
-        query = query.order_by(UserActivity.created_at.desc())
+        query = query.order_by(UserActivity.created_at.desc(), UserActivity.id.desc())
+        total = query.order_by(None).count()
 
         if not fetch_all:
-            safe_limit = 20 if not limit or limit < 1 else min(limit, 200)
-            query = query.limit(safe_limit)
+            pagination = query.paginate(page=page, per_page=safe_per_page, error_out=False)
+            activities = pagination.items
+            total_pages = pagination.pages
+            current_page = pagination.page
+        else:
+            activities = query.limit(safe_per_page).all()
+            total_pages = 1
+            current_page = 1
 
-        activities = query.all()
-        
         return jsonify({
             'success': True,
-            'activities': [activity.to_dict() for activity in activities]
+            'activities': [activity.to_dict() for activity in activities],
+            'total': total,
+            'page': current_page,
+            'pages': total_pages,
+            'per_page': safe_per_page
         }), 200
         
     except Exception as e:
@@ -283,12 +288,7 @@ def create_activity():
                 'message': 'activity_type is required'
             }), 400
 
-        activity = UserActivity(
-            user_id=user_id,
-            activity_type=activity_type[:50],
-            description=description[:200] if description else None
-        )
-        db.session.add(activity)
+        activity = log_user_activity(user_id, activity_type, description)
         db.session.commit()
 
         return jsonify({

@@ -4,7 +4,8 @@ from flask_jwt_extended import (
     create_refresh_token, 
     jwt_required
 )
-from app.models import db, User, UserActivity
+from app.models import db, User
+from app.utils.activity import log_user_activity
 from app.utils.decorators import validate_email, validate_username
 from app.utils.jwt_utils import get_current_user_id
 
@@ -87,15 +88,8 @@ def signup():
         new_user.set_password(data['password'])
         
         db.session.add(new_user)
-        db.session.commit()
-        
-        # Log activity
-        activity = UserActivity(
-            user_id=new_user.id,
-            activity_type='signup',
-            description='User registered an account'
-        )
-        db.session.add(activity)
+        db.session.flush()
+        log_user_activity(new_user.id, 'signup', 'User registered an account')
         db.session.commit()
         
         # Generate tokens
@@ -150,13 +144,7 @@ def login():
         access_token = create_access_token(identity=str(user.id))
         refresh_token = create_refresh_token(identity=str(user.id))
         
-        # Log activity
-        activity = UserActivity(
-            user_id=user.id,
-            activity_type='login',
-            description='User logged in'
-        )
-        db.session.add(activity)
+        log_user_activity(user.id, 'login', 'User logged in')
         db.session.commit()
         
         return jsonify({
@@ -168,6 +156,7 @@ def login():
         }), 200
         
     except Exception as e:
+        db.session.rollback()
         return jsonify({
             'success': False,
             'message': 'Login failed',
@@ -182,13 +171,7 @@ def logout():
     try:
         user_id = get_current_user_id()
         
-        # Log activity
-        activity = UserActivity(
-            user_id=user_id,
-            activity_type='logout',
-            description='User logged out'
-        )
-        db.session.add(activity)
+        log_user_activity(user_id, 'logout', 'User logged out')
         db.session.commit()
         
         return jsonify({
@@ -197,6 +180,7 @@ def logout():
         }), 200
         
     except Exception as e:
+        db.session.rollback()
         return jsonify({
             'success': False,
             'message': 'Logout failed',

@@ -1,7 +1,9 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 from app.models import db, User, Feedback, UserActivity
+from app.utils.activity import log_user_activity
 from app.utils.decorators import validate_email, validate_username
 from app.utils.jwt_utils import get_current_user_id
 
@@ -145,6 +147,11 @@ def update_user(user_id):
         if 'password' in data and data['password']:
             user.set_password(data['password'])
         
+        log_user_activity(
+            current_user.id,
+            'admin_user_updated',
+            f'Updated user {user.username} (ID {user.id})'
+        )
         db.session.commit()
         
         return jsonify({
@@ -193,6 +200,11 @@ def delete_user(user_id):
         
         # Soft delete
         user.is_active = False
+        log_user_activity(
+            current_user.id,
+            'admin_user_deactivated',
+            f'Deactivated user {user.username} (ID {user.id})'
+        )
         db.session.commit()
         
         return jsonify({
@@ -273,5 +285,70 @@ def get_stats():
         return jsonify({
             'success': False,
             'message': 'Failed to get statistics',
+            'error': str(e)
+        }), 500
+
+
+@admin_bp.route('/activity', methods=['GET'])
+@jwt_required()
+def get_activity_logs():
+    """Get recent activity across all users (Admin only)."""
+    try:
+        current_user_id = get_current_user_id()
+        current_user = User.query.get(current_user_id)
+        
+        if not current_user or not current_user.is_admin:
+            return jsonify({
+                'success': False,
+                'message': 'Admin privileges required'
+            }), 403
+
+        fetch_all = request.args.get('all', 'false').lower() == 'true'
+        activity_type = request.args.get('activity_type')
+        actor_role = request.args.get('role')
+        actor_user_id = request.args.get('user_id', type=int)
+        limit = request.args.get('limit', 50, type=int)
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', limit if limit and limit > 0 else 50, type=int)
+        safe_per_page = 50 if not per_page or per_page < 1 else min(per_page, 200)
+
+        query = UserActivity.query.options(joinedload(UserActivity.user))
+
+        if activity_type:
+            query = query.filter(UserActivity.activity_type == activity_type)
+
+        if actor_user_id:
+            query = query.filter(UserActivity.user_id == actor_user_id)
+
+        if actor_role in {'admin', 'user'}:
+            query = query.join(UserActivity.user)
+            query = query.filter(User.is_admin.is_(actor_role == 'admin'))
+
+        query = query.order_by(UserActivity.created_at.desc(), UserActivity.id.desc())
+        total = query.order_by(None).count()
+
+        if fetch_all:
+            activities = query.limit(safe_per_page).all()
+            total_pages = 1
+            current_page = 1
+        else:
+            pagination = query.paginate(page=page, per_page=safe_per_page, error_out=False)
+            activities = pagination.items
+            total_pages = pagination.pages
+            current_page = pagination.page
+
+        return jsonify({
+            'success': True,
+            'activities': [activity.to_dict(include_user=True) for activity in activities],
+            'total': total,
+            'page': current_page,
+            'pages': total_pages,
+            'per_page': safe_per_page
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': 'Failed to get activity logs',
             'error': str(e)
         }), 500

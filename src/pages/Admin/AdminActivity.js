@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { adminService } from "../../api/adminService";
-import { userService } from "../../api/userService";
 import "./Admin.css";
 
 const iconByType = {
@@ -28,9 +27,9 @@ const styleColorMap = {
 
 const normalizeType = (activityType = "") => {
   const value = activityType.toLowerCase();
+  if (value.startsWith("admin_") || value.includes("profile") || value.includes("setting") || value.includes("password")) return "system";
   if (value.includes("login") || value.includes("logout") || value.includes("auth")) return "auth";
   if (value.includes("feedback")) return "feedback";
-  if (value.includes("profile") || value.includes("setting") || value.includes("password")) return "system";
   return "user";
 };
 
@@ -57,6 +56,8 @@ function AdminActivity() {
 
   useEffect(() => {
     fetchActivityData();
+    const intervalId = setInterval(fetchActivityData, 30000);
+    return () => clearInterval(intervalId);
   }, []);
 
   const fetchActivityData = async () => {
@@ -64,79 +65,31 @@ function AdminActivity() {
       setLoading(true);
       setError("");
 
-      const [activityRes, users, feedbackRaw] = await Promise.all([
-        userService.getActivity({ all: true, limit: 100 }),
-        adminService.getAllUsers(1, 200),
-        adminService.getAllFeedback(),
-      ]);
-
-      const feedbacks = Array.isArray(feedbackRaw) ? feedbackRaw : feedbackRaw?.feedbacks || [];
-      const adminEvents = (activityRes?.activities || []).map((entry) => {
+      const activityRes = await adminService.getActivityLogs({ all: true, limit: 200 });
+      const activityEvents = (activityRes?.activities || []).map((entry) => {
         const type = normalizeType(entry.activity_type);
+        const actor = entry.user
+          ? `${entry.user.firstname || ""} ${entry.user.lastname || ""}`.trim() ||
+            entry.user.username ||
+            entry.user.email
+          : "Unknown user";
+
         return {
-          id: `admin-${entry.id}`,
+          id: `activity-${entry.id}`,
           type,
           action: toTitleCase(entry.activity_type || "activity"),
-          description: entry.description || "Admin action recorded",
-          admin: "Administrator",
+          description: entry.description || "Activity recorded",
+          admin: entry.user?.is_admin ? `${actor} (Admin)` : actor,
           timestamp: entry.created_at,
           icon: iconByType[type] || "activity",
           color: colorByType[type] || "info",
         };
       });
-
-      const userEvents = (users || []).map((item) => ({
-        id: `user-${item.id}`,
-        type: "user",
-        action: "User Registration",
-        description: `New user '${item.username}' joined as ${item.category || "Other"}`,
-        admin: "System",
-        timestamp: item.created_at,
-        icon: "person-plus",
-        color: "success",
-      }));
-
-      const feedbackEvents = (feedbacks || []).flatMap((item) => {
-        const createdEvent = {
-          id: `feedback-created-${item.id}`,
-          type: "feedback",
-          action: "Feedback Submitted",
-          description: `Feedback #${item.id} submitted by ${item.user?.username || "user"}`,
-          admin: "System",
-          timestamp: item.created_at,
-          icon: "chat-dots",
-          color: "info",
-        };
-
-        const statusChanged =
-          item.updated_at &&
-          item.created_at &&
-          toTimestamp(item.updated_at) > toTimestamp(item.created_at) &&
-          item.status &&
-          item.status !== "pending";
-
-        if (!statusChanged) return [createdEvent];
-
-        return [
-          createdEvent,
-          {
-            id: `feedback-updated-${item.id}`,
-            type: "feedback",
-            action: "Feedback Status Updated",
-            description: `Feedback #${item.id} marked as ${item.status}`,
-            admin: "Administrator",
-            timestamp: item.updated_at,
-            icon: "check2-circle",
-            color: "warning",
-          },
-        ];
-      });
-
-      const mergedEvents = [...adminEvents, ...userEvents, ...feedbackEvents]
-        .sort((a, b) => toTimestamp(b.timestamp) - toTimestamp(a.timestamp))
-        .slice(0, 200);
-
-      setActivities(mergedEvents);
+      setActivities(
+        activityEvents
+          .sort((a, b) => toTimestamp(b.timestamp) - toTimestamp(a.timestamp))
+          .slice(0, 200)
+      );
     } catch (err) {
       setError(err?.message || "Failed to load activity logs");
     } finally {
@@ -147,7 +100,10 @@ function AdminActivity() {
   const filteredActivities = useMemo(
     () =>
       activities.filter((activity) => {
-        const matchesFilter = filter === "all" || activity.type === filter;
+        const matchesFilter =
+          filter === "all" ||
+          activity.type === filter ||
+          (filter === "system" && activity.type === "auth");
         const query = searchTerm.toLowerCase();
         const matchesSearch =
           activity.description.toLowerCase().includes(query) ||
@@ -309,7 +265,7 @@ function AdminActivity() {
               <i className="bi bi-chat-dots"></i> Feedback
             </button>
             <button className={`filter-btn ${filter === "system" ? "active" : ""}`} onClick={() => setFilter("system")}>
-              <i className="bi bi-gear"></i> System
+              <i className="bi bi-gear"></i> System & Auth
             </button>
           </div>
         </div>

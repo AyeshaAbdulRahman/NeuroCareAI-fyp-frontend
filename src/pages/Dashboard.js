@@ -51,7 +51,7 @@ function Dashboard() {
   const fetchRecentActivities = async () => {
     setActivityLoading(true);
     try {
-      const response = await userService.getActivity();
+      const response = await userService.getActivity({ limit: 5 });
       if (response.success) {
         setActivities(response.activities || []);
       }
@@ -69,7 +69,12 @@ function Dashboard() {
       logout: "bi-box-arrow-right",
       signup: "bi-person-plus",
       profile_update: "bi-person-gear",
-      profile_picture_update: "bi-image"
+      profile_picture_update: "bi-image",
+      report_upload: "bi-file-earmark-arrow-up",
+      diagnosis_submission: "bi-activity",
+      feedback_submitted: "bi-chat-dots",
+      feedback_deleted: "bi-trash",
+      account_deactivated: "bi-person-dash"
     };
     return iconMap[activityType] || "bi-clock-history";
   };
@@ -80,39 +85,36 @@ function Dashboard() {
       logout: "Logged out",
       signup: "Account created",
       profile_update: "Profile updated",
-      profile_picture_update: "Profile picture updated"
+      profile_picture_update: "Profile picture updated",
+      report_upload: "Report uploaded",
+      diagnosis_submission: "Diagnosis submitted",
+      feedback_submitted: "Feedback submitted",
+      feedback_deleted: "Feedback deleted",
+      account_deactivated: "Account deactivated"
     };
     return titleMap[activity.activity_type] || activity.description || "Activity";
   };
 
-  const getRecentHighlights = () => {
-    const latestLogin = activities.find((activity) => activity.activity_type === "login");
-    const latestProfileUpdate = activities.find((activity) =>
-      ["profile_update", "profile_picture_update"].includes(activity.activity_type)
-    );
-
-    return [
-      latestLogin
-        ? { ...latestLogin, highlightLabel: "Last Login" }
-        : null,
-      latestProfileUpdate
-        ? { ...latestProfileUpdate, highlightLabel: "Last Profile Update" }
-        : null,
-    ].filter(Boolean);
-  };
-
   const getTimeAgo = (dateString) => {
     if (!dateString) return "Just now";
+    
+    // Ensure the timestamp has UTC indicator
+    let fullDateString = dateString;
+    if (!dateString.endsWith('Z')) {
+      fullDateString = dateString + 'Z';
+    }
+    
+    const date = new Date(fullDateString);
     const seconds = Math.max(
       1,
-      Math.floor((Date.now() - new Date(dateString).getTime()) / 1000)
+      Math.floor((Date.now() - date.getTime()) / 1000)
     );
 
     if (seconds < 60) return "Just now";
     if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)} hr ago`;
     if (seconds < 604800) return `${Math.floor(seconds / 86400)} day ago`;
-    return new Date(dateString).toLocaleDateString();
+    return date.toLocaleDateString();
   };
 
   const handleImageChange = async (e) => {
@@ -152,7 +154,7 @@ function Dashboard() {
     );
   }
 
-  const recentHighlights = getRecentHighlights();
+  const recentActivities = activities.slice(0, 5);
 
   return (
     <section className="dashboard">
@@ -216,15 +218,15 @@ function Dashboard() {
           <h3>Recent Activity</h3>
           {activityLoading ? (
             <p className="activity-empty">Loading activities...</p>
-          ) : recentHighlights.length === 0 ? (
+          ) : recentActivities.length === 0 ? (
             <p className="activity-empty">No recent activities yet.</p>
           ) : (
             <ul>
-              {recentHighlights.map((activity) => (
+              {recentActivities.map((activity) => (
                 <li key={activity.id}>
                   <div className="activity-title">
                     <i className={`bi ${getActivityIcon(activity.activity_type)}`}></i>
-                    <span>{activity.highlightLabel}: {getActivityTitle(activity)}</span>
+                    <span>{getActivityTitle(activity)}</span>
                   </div>
                   <small className="activity-time">{getTimeAgo(activity.created_at)}</small>
                 </li>

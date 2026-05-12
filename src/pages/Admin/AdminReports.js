@@ -9,7 +9,11 @@ const formatMonth = (date) =>
   });
 
 const toTimestamp = (value) => {
-  const time = new Date(value).getTime();
+  let dateString = value;
+  if (typeof dateString === 'string' && !dateString.endsWith('Z')) {
+    dateString = dateString + 'Z';
+  }
+  const time = new Date(dateString).getTime();
   return Number.isNaN(time) ? 0 : time;
 };
 
