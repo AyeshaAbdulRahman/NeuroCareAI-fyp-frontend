@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { userService } from "../../api/userService";
+import { formatDateTime } from "../../utils/dateTime";
 import "./Admin.css";
 
 function AdminProfile() {
@@ -284,7 +285,7 @@ function AdminProfile() {
                       <div className="activity-icon"><i className="bi bi-activity"></i></div>
                       <div className="activity-details">
                         <p>{activity.description || activity.activity_type}</p>
-                        <small>{activity.created_at ? new Date(activity.created_at).toLocaleString() : "-"}</small>
+                        <small>{formatDateTime(activity.created_at)}</small>
                       </div>
                     </div>
                   ))
@@ -323,7 +324,7 @@ function AdminProfile() {
                 <div className="settings-option">
                   <div className="option-info">
                     <p>Created At</p>
-                    <small>{user?.created_at ? new Date(user.created_at).toLocaleString() : "-"}</small>
+                    <small>{formatDateTime(user?.created_at)}</small>
                   </div>
                 </div>
               </div>

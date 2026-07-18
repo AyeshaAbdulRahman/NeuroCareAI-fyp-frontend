@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { adminService } from "../../api/adminService";
 import { userService } from "../../api/userService";
+import { formatDateTime, parseBackendDate, toTimestamp } from "../../utils/dateTime";
 import "./Admin.css";
 
 const iconByType = {
@@ -74,12 +75,6 @@ const toTitleCase = (text = "") =>
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
-
-const toTimestamp = (value) => {
-  if (!value) return 0;
-  const time = new Date(value).getTime();
-  return Number.isNaN(time) ? 0 : time;
-};
 
 function AdminActivity() {
   const navigate = useNavigate();
@@ -234,7 +229,7 @@ const feedbacks = Array.isArray(feedbackRaw)
       item.type,
       item.description,
       item.admin,
-      item.timestamp ? new Date(item.timestamp).toISOString() : "",
+      item.timestamp ? parseBackendDate(item.timestamp)?.toISOString() || "" : "",
     ]);
     const csv = [headers, ...rows]
       .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
@@ -395,7 +390,7 @@ const feedbacks = Array.isArray(feedbackRaw)
                     <span className="activity-action">{activity.action}</span>
                     <span className="activity-time">
                       <i className="bi bi-clock"></i>{" "}
-                      {activity.timestamp ? new Date(activity.timestamp).toLocaleString() : "-"}
+                      {formatDateTime(activity.timestamp)}
                     </span>
                   </div>
                   <p className="activity-description">{activity.description}</p>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./Styles/Dashboard.css";
 import { useNavigate } from "react-router-dom";
 import userService from "../api/userService";
+import { formatTimeAgo } from "../utils/dateTime";
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -99,20 +100,6 @@ function Dashboard() {
         ? { ...latestProfileUpdate, highlightLabel: "Last Profile Update" }
         : null,
     ].filter(Boolean);
-  };
-
-  const getTimeAgo = (dateString) => {
-    if (!dateString) return "Just now";
-    const seconds = Math.max(
-      1,
-      Math.floor((Date.now() - new Date(dateString).getTime()) / 1000)
-    );
-
-    if (seconds < 60) return "Just now";
-    if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hr ago`;
-    if (seconds < 604800) return `${Math.floor(seconds / 86400)} day ago`;
-    return new Date(dateString).toLocaleDateString();
   };
 
   const handleImageChange = async (e) => {
@@ -226,7 +213,7 @@ function Dashboard() {
                     <i className={`bi ${getActivityIcon(activity.activity_type)}`}></i>
                     <span>{activity.highlightLabel}: {getActivityTitle(activity)}</span>
                   </div>
-                  <small className="activity-time">{getTimeAgo(activity.created_at)}</small>
+                  <small className="activity-time">{formatTimeAgo(activity.created_at)}</small>
                 </li>
               ))}
             </ul>
