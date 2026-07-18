@@ -311,3 +311,123 @@
     margin-bottom: 1rem;
   }
 }
+
+
+
+
+
+
+
+
+
+/* ─── Add these blocks to your existing Diagnosis.css ─────────────────────── */
+
+/* Mode toggle */
+.mode-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.8rem;
+}
+
+.mode-btn {
+  padding: 0.55rem 1.4rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.mode-btn:hover {
+  border-color: var(--secondary, #a78bfa);
+  color: #e2e8f0;
+}
+
+.mode-btn.active {
+  background: rgba(167, 139, 250, 0.12);
+  border-color: var(--secondary, #a78bfa);
+  color: var(--secondary, #a78bfa);
+  font-weight: 600;
+}
+
+/* File drop zones */
+.drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 1rem 1.2rem;
+  margin-bottom: 0.9rem;
+  border: 1.5px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease;
+  min-height: 72px;
+  text-align: center;
+}
+
+.drop-zone:hover {
+  border-color: var(--secondary, #a78bfa);
+  background: rgba(167, 139, 250, 0.05);
+}
+
+.drop-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.drop-hint {
+  font-size: 0.76rem;
+  color: #475569;
+}
+
+.drop-file {
+  font-size: 0.78rem;
+  color: #34d399;
+  font-weight: 600;
+}
+
+/* Info box (processing time warning) */
+.info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  background: rgba(251, 191, 36, 0.06);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 8px;
+  font-size: 0.84rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+/* Error text */
+.error-text {
+  color: #f87171;
+  font-size: 0.84rem;
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+/* Spinner label inside button */
+.spinner-label::before {
+  content: "";
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+  margin-right: 0.45rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

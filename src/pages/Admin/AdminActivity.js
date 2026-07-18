@@ -26,11 +26,46 @@ const styleColorMap = {
   primary: "var(--admin-primary)",
 };
 
+// const normalizeType = (activityType = "") => {
+//   const value = activityType.toLowerCase();
+//   if (value.includes("login") || value.includes("logout") || value.includes("auth")) return "auth";
+//   if (value.includes("feedback")) return "feedback";
+//   if (value.includes("profile") || value.includes("setting") || value.includes("password")) return "system";
+//   return "user";
+// };
+
 const normalizeType = (activityType = "") => {
   const value = activityType.toLowerCase();
-  if (value.includes("login") || value.includes("logout") || value.includes("auth")) return "auth";
-  if (value.includes("feedback")) return "feedback";
-  if (value.includes("profile") || value.includes("setting") || value.includes("password")) return "system";
+
+  if (
+    value.includes("login") ||
+    value.includes("logout") ||
+    value.includes("auth")
+  ) {
+    return "auth";
+  }
+
+  if (value.includes("feedback")) {
+    return "feedback";
+  }
+
+  if (
+    value.includes("profile") ||
+    value.includes("setting") ||
+    value.includes("password")
+  ) {
+    return "system";
+  }
+
+  // ✅ ADD THIS PART (this is your missing "submission log fix")
+  if (
+    value.includes("diagnosis") ||
+    value.includes("submission") ||
+    value.includes("upload")
+  ) {
+    return "system";
+  }
+
   return "user";
 };
 
@@ -64,13 +99,47 @@ function AdminActivity() {
       setLoading(true);
       setError("");
 
-      const [activityRes, users, feedbackRaw] = await Promise.all([
-        userService.getActivity({ all: true, limit: 100 }),
-        adminService.getAllUsers(1, 200),
-        adminService.getAllFeedback(),
-      ]);
+      // const [activityRes, users, feedbackRaw] = await Promise.allSettled([
+      //   userService.getActivity({ all: true, limit: 100 }),
+      //   adminService.getAllUsers(1, 200),
+      //   adminService.getAllFeedback(),
+      // ]);
 
-      const feedbacks = Array.isArray(feedbackRaw) ? feedbackRaw : feedbackRaw?.feedbacks || [];
+      // const feedbacks = Array.isArray(feedbackRaw) ? feedbackRaw : feedbackRaw?.feedbacks || [];
+
+      const [activityResult, usersResult, feedbackResult] = await Promise.allSettled([
+  userService.getActivity({ all: true, limit: 100 }),
+  adminService.getAllUsers(1, 200),
+  adminService.getAllFeedback(),
+]);
+
+// Extract actual values safely
+const activityRes =
+  activityResult.status === "fulfilled"
+    ? activityResult.value
+    : { activities: [] };
+
+const usersData =
+  usersResult.status === "fulfilled"
+    ? usersResult.value
+    : [];
+
+const feedbackRaw =
+  feedbackResult.status === "fulfilled"
+    ? feedbackResult.value
+    : [];
+
+// Normalize arrays safely
+const users = Array.isArray(usersData)
+  ? usersData
+  : usersData?.users || [];
+
+const feedbacks = Array.isArray(feedbackRaw)
+  ? feedbackRaw
+  : feedbackRaw?.feedbacks || [];
+
+
+
       const adminEvents = (activityRes?.activities || []).map((entry) => {
         const type = normalizeType(entry.activity_type);
         return {

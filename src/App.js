@@ -20,6 +20,7 @@ import Chatbot from "./pages/Chatbot";
 import DiagnosisMain from "./pages/Diagnosis/Diagnosis";
 import DiagnosisInput from "./pages/Diagnosis/DiagnosisInput";
 import DiagnosisPreprocess from "./pages/Diagnosis/DiagnosisPreprocess";
+
 import DiagnosisResult from "./pages/Diagnosis/DiagnosisResult";
 import ReportHistory from "./pages/Diagnosis/ReportHistory";
 import Visualization from "./pages/Diagnosis/Visualization";
@@ -152,6 +153,7 @@ function App() {
             <ReportHistory />
           </ProtectedRoute>
         } />
+        <Route path="/diagnosis/result" element={<DiagnosisResult />} />
         <Route path="/diagnosis/visualization" element={
           <ProtectedRoute>
             <Visualization />

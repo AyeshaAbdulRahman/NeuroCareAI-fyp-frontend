@@ -28,12 +28,14 @@ def create_app(config_name='default'):
     
     # Register blueprints
     from app.routes import auth_bp, users_bp, feedback_bp, admin_bp, chatbot_bp
-    
+    from app.blueprints.predict import predict_bp          # ← ADD THIS
+
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(users_bp, url_prefix='/api/users')
     app.register_blueprint(feedback_bp, url_prefix='/api/feedback')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(chatbot_bp, url_prefix='/api/chatbot')
+    app.register_blueprint(predict_bp)                     # ← ADD THIS
     
     # Health check route
     @app.route('/api/health', methods=['GET'])
