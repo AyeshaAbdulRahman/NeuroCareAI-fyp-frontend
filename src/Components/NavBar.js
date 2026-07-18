@@ -17,6 +17,8 @@ function NavBar({ isLoggedIn, setIsLoggedIn, user }) {
   };
 
   const isAdmin = user?.is_admin === true;
+  const userCategory = (user?.category || "").trim().toLowerCase();
+  const canUseDiagnosis = isAdmin || (user && userCategory !== "patient");
 
   return (
     <nav>
@@ -37,7 +39,9 @@ function NavBar({ isLoggedIn, setIsLoggedIn, user }) {
               <li><Link to="/admin"><i className="bi bi-speedometer2"></i> Admin</Link></li>
             )}
             <li><Link to="/chatbot"><i className="bi bi-chat"></i> Chat Bot</Link></li>
-            <li><Link to="/diagnosis"><i className="bi bi-heart"></i> Diagnosis</Link></li>
+            {canUseDiagnosis && (
+              <li><Link to="/diagnosis"><i className="bi bi-heart"></i> Diagnosis</Link></li>
+            )}
             <li><Link to="/dashboard"><i className="bi bi-person"></i> Profile</Link></li>
             <li><button onClick={handleLogout} className="logout-btn"><i className="bi bi-box-arrow-right"></i> Logout</button></li>
           </>

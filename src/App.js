@@ -35,7 +35,7 @@ import ScrollToTopButton from "./Components/ScrollToTopButton";
 import "./App.css";
 
 // Protected Route Component
-function ProtectedRoute({ children, requireAdmin = false }) {
+function ProtectedRoute({ children, requireAdmin = false, blockPatient = false }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -56,6 +56,10 @@ function ProtectedRoute({ children, requireAdmin = false }) {
   }
 
   if (requireAdmin && !user.is_admin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (blockPatient && (user.category || "").trim().toLowerCase() === "patient" && !user.is_admin) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -129,33 +133,32 @@ function App() {
 
         {/* Diagnosis Module Routes */}
         <Route path="/diagnosis" element={
-          <ProtectedRoute>
+          <ProtectedRoute blockPatient={true}>
             <DiagnosisMain />
           </ProtectedRoute>
         } />
         <Route path="/diagnosis/input" element={
-          <ProtectedRoute>
+          <ProtectedRoute blockPatient={true}>
             <DiagnosisInput />
           </ProtectedRoute>
         } />
         <Route path="/diagnosis/preprocess" element={
-          <ProtectedRoute>
+          <ProtectedRoute blockPatient={true}>
             <DiagnosisPreprocess />
           </ProtectedRoute>
         } />
         <Route path="/diagnosis/result" element={
-          <ProtectedRoute>
+          <ProtectedRoute blockPatient={true}>
             <DiagnosisResult />
           </ProtectedRoute>
         } />
         <Route path="/diagnosis/report-history" element={
-          <ProtectedRoute>
+          <ProtectedRoute blockPatient={true}>
             <ReportHistory />
           </ProtectedRoute>
         } />
-        <Route path="/diagnosis/result" element={<DiagnosisResult />} />
         <Route path="/diagnosis/visualization" element={
-          <ProtectedRoute>
+          <ProtectedRoute blockPatient={true}>
             <Visualization />
           </ProtectedRoute>
         } />

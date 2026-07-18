@@ -176,6 +176,11 @@ export default function DiagnosisInput() {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState("");
 
+  const authHeaders = () => {
+    const token = localStorage.getItem("token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
   /* ── batch submit ──────────────────────────────────────────────────────── */
   async function handleBatchSubmit() {
     if (!fileX || !fileY || !fileGroups) {
@@ -191,7 +196,7 @@ export default function DiagnosisInput() {
     fd.append("file_groups", fileGroups);
 
     try {
-      const res  = await fetch("/api/predict", { method: "POST", body: fd });
+      const res  = await fetch("/api/predict", { method: "POST", headers: authHeaders(), body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Prediction failed");
       navigate("/diagnosis/result", {
@@ -223,7 +228,7 @@ export default function DiagnosisInput() {
     fd.append("file_set", fileSet);
 
     try {
-      const res  = await fetch("/api/predict/single", { method: "POST", body: fd });
+      const res  = await fetch("/api/predict/single", { method: "POST", headers: authHeaders(), body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Inference failed");
       navigate("/diagnosis/result", {
