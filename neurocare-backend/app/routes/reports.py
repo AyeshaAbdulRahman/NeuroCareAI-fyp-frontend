@@ -3,17 +3,20 @@ from __future__ import annotations
 import io
 import json
 import re
+import textwrap
 import zipfile
 from datetime import datetime
 
 from flask import Blueprint, jsonify, request, send_file
-from flask_jwt_extended import jwt_required
 
 from app.models import DiagnosisReport, UserActivity, db
+from app.utils.decorators import diagnosis_access_required
 from app.utils.jwt_utils import get_current_user_id
 
 
 reports_bp = Blueprint('reports', __name__)
+
+PDF_MIMETYPE = 'application/pdf'
 
 
 def _safe_filename(value: str) -> str:
@@ -87,8 +90,104 @@ def _render_report_text(report: DiagnosisReport) -> str:
     return '\n'.join(lines)
 
 
+def _pdf_escape(value: str) -> str:
+    return value.replace('\\', '\\\\').replace('(', '\\(').replace(')', '\\)')
+
+
+def _wrap_pdf_lines(text: str, max_chars: int = 95) -> list[str]:
+    lines = []
+    wrapper = textwrap.TextWrapper(
+        width=max_chars,
+        break_long_words=True,
+        break_on_hyphens=False,
+        replace_whitespace=False,
+        drop_whitespace=False,
+        subsequent_indent='  ',
+    )
+    for raw_line in text.splitlines():
+        lines.extend(wrapper.wrap(raw_line) if raw_line else [''])
+    return lines or ['']
+
+
+def _build_pdf(content: str) -> bytes:
+    page_width = 612
+    page_height = 792
+    margin_x = 54
+    margin_top = 58
+    line_height = 14
+    font_size = 10
+    lines_per_page = int((page_height - (margin_top * 2)) / line_height)
+    wrapped_lines = _wrap_pdf_lines(content)
+    pages = [
+        wrapped_lines[index:index + lines_per_page]
+        for index in range(0, len(wrapped_lines), lines_per_page)
+    ] or [['']]
+
+    objects = [
+        (1, b'<< /Type /Catalog /Pages 2 0 R >>'),
+        (3, b'<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'),
+    ]
+    kids = []
+
+    for page_index, page_lines in enumerate(pages):
+        content_id = 4 + (page_index * 2)
+        page_id = content_id + 1
+        kids.append(f'{page_id} 0 R')
+
+        commands = [
+            'BT',
+            f'/F1 {font_size} Tf',
+            f'{line_height} TL',
+            f'{margin_x} {page_height - margin_top} Td',
+        ]
+        for line in page_lines:
+            safe_line = line.encode('latin-1', errors='replace').decode('latin-1')
+            commands.append(f'({_pdf_escape(safe_line)}) Tj')
+            commands.append('T*')
+        commands.append('ET')
+
+        stream = '\n'.join(commands).encode('latin-1')
+        objects.append((
+            content_id,
+            f'<< /Length {len(stream)} >>\nstream\n'.encode('ascii') + stream + b'\nendstream'
+        ))
+        objects.append((
+            page_id,
+            (
+                f'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {page_width} {page_height}] '
+                f'/Resources << /Font << /F1 3 0 R >> >> /Contents {content_id} 0 R >>'
+            ).encode('ascii')
+        ))
+
+    objects.append((2, f'<< /Type /Pages /Kids [{" ".join(kids)}] /Count {len(kids)} >>'.encode('ascii')))
+    objects.sort(key=lambda item: item[0])
+
+    pdf = bytearray(b'%PDF-1.4\n%\xe2\xe3\xcf\xd3\n')
+    offsets = [0]
+    for object_id, body in objects:
+        offsets.append(len(pdf))
+        pdf.extend(f'{object_id} 0 obj\n'.encode('ascii'))
+        pdf.extend(body)
+        pdf.extend(b'\nendobj\n')
+
+    xref_offset = len(pdf)
+    pdf.extend(f'xref\n0 {len(objects) + 1}\n'.encode('ascii'))
+    pdf.extend(b'0000000000 65535 f \n')
+    for offset in offsets[1:]:
+        pdf.extend(f'{offset:010d} 00000 n \n'.encode('ascii'))
+    pdf.extend(
+        f'trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\n'
+        f'startxref\n{xref_offset}\n%%EOF\n'.encode('ascii')
+    )
+    return bytes(pdf)
+
+
+def _render_report_pdf(report: DiagnosisReport) -> bytes:
+    return _build_pdf(_render_report_text(report))
+
+
 @reports_bp.route('', methods=['POST'])
-@jwt_required()
+@diagnosis_access_required
 def save_report():
     try:
         user_id = get_current_user_id()
@@ -124,7 +223,7 @@ def save_report():
 
 
 @reports_bp.route('', methods=['GET'])
-@jwt_required()
+@diagnosis_access_required
 def list_reports():
     try:
         user_id = get_current_user_id()
@@ -143,7 +242,7 @@ def list_reports():
 
 
 @reports_bp.route('/<int:report_id>', methods=['GET'])
-@jwt_required()
+@diagnosis_access_required
 def get_report(report_id: int):
     try:
         user_id = get_current_user_id()
@@ -156,7 +255,7 @@ def get_report(report_id: int):
 
 
 @reports_bp.route('/<int:report_id>/download', methods=['GET'])
-@jwt_required()
+@diagnosis_access_required
 def download_report(report_id: int):
     try:
         user_id = get_current_user_id()
@@ -164,22 +263,11 @@ def download_report(report_id: int):
         if not report:
             return jsonify({'success': False, 'message': 'Report not found'}), 404
 
-        format_name = (request.args.get('format') or 'txt').strip().lower()
-        text = _render_report_text(report)
-        if format_name == 'json':
-            payload = report.to_dict()
-            file_bytes = json.dumps(payload, indent=2, ensure_ascii=False).encode('utf-8')
-            mimetype = 'application/json'
-            extension = 'json'
-        else:
-            file_bytes = text.encode('utf-8')
-            mimetype = 'text/plain'
-            extension = 'txt'
-
-        filename = _safe_filename(f"{report.title}-{report.id}.{extension}")
+        file_bytes = _render_report_pdf(report)
+        filename = _safe_filename(f"{report.title}-{report.id}.pdf")
         return send_file(
             io.BytesIO(file_bytes),
-            mimetype=mimetype,
+            mimetype=PDF_MIMETYPE,
             as_attachment=True,
             download_name=filename,
         )
@@ -188,12 +276,11 @@ def download_report(report_id: int):
 
 
 @reports_bp.route('/download', methods=['GET'])
-@jwt_required()
+@diagnosis_access_required
 def download_reports():
     try:
         user_id = get_current_user_id()
         ids_param = request.args.get('ids', '')
-        format_name = (request.args.get('format') or 'txt').strip().lower()
         report_ids = [int(item) for item in ids_param.split(',') if item.strip().isdigit()]
 
         if not report_ids:
@@ -210,13 +297,8 @@ def download_reports():
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as archive:
             for report in reports:
-                extension = 'json' if format_name == 'json' else 'txt'
-                filename = _safe_filename(f"{report.title}-{report.id}.{extension}")
-                if format_name == 'json':
-                    content = json.dumps(report.to_dict(), indent=2, ensure_ascii=False)
-                else:
-                    content = _render_report_text(report)
-                archive.writestr(filename, content)
+                filename = _safe_filename(f"{report.title}-{report.id}.pdf")
+                archive.writestr(filename, _render_report_pdf(report))
 
         buffer.seek(0)
         return send_file(

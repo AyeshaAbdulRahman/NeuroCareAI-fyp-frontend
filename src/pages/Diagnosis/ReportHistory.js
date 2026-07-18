@@ -56,7 +56,7 @@ function ReportHistory() {
 
   const handleSingleDownload = async (reportId) => {
     try {
-      await reportService.downloadReport(reportId, "txt");
+      await reportService.downloadReport(reportId, "pdf");
     } catch (err) {
       setError(err?.message || "Failed to download report");
     }
@@ -70,7 +70,7 @@ function ReportHistory() {
     try {
       setBulkDownloading(true);
       setError("");
-      await reportService.downloadReports(selectedIds, "txt");
+      await reportService.downloadReports(selectedIds, "pdf");
     } catch (err) {
       setError(err?.message || "Failed to download selected reports");
     } finally {

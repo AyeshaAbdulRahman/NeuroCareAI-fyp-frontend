@@ -370,6 +370,7 @@ from sklearn.model_selection import GroupShuffleSplit
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import classification_report, confusion_matrix
 from app.models import db, UserActivity
+from app.utils.decorators import diagnosis_access_required
 from app.utils.jwt_utils import get_current_user_id
 
 predict_bp = Blueprint("predict", __name__, url_prefix="/api")
@@ -470,6 +471,7 @@ def _run_batch_pipeline(X_raw, y_raw, groups_raw):
 
 
 @predict_bp.route("/predict", methods=["POST"])
+@diagnosis_access_required
 def predict_batch():
     missing = [f for f in ("file_X", "file_y", "file_groups")
                if f not in request.files]
@@ -664,6 +666,7 @@ def _run_single_pipeline(set_path: str):
 
 
 @predict_bp.route("/predict/single", methods=["POST"])
+@diagnosis_access_required
 def predict_single():
     if "file_set" not in request.files:
         return jsonify({"error": "Upload a .set EEG file as file_set"}), 400

@@ -65,6 +65,42 @@ def admin_required(fn):
     return wrapper
 
 
+def diagnosis_access_required(fn):
+    """Decorator to block patient accounts from diagnosis/report features."""
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        try:
+            verify_jwt_in_request()
+            user_id = get_current_user_id()
+            user = User.query.get(user_id)
+            if not user:
+                return jsonify({
+                    'success': False,
+                    'message': 'User not found',
+                    'error': 'USER_NOT_FOUND'
+                }), 404
+            if not user.is_active:
+                return jsonify({
+                    'success': False,
+                    'message': 'Account is deactivated',
+                    'error': 'ACCOUNT_INACTIVE'
+                }), 403
+            if (user.category or '').strip().lower() == 'patient' and not user.is_admin:
+                return jsonify({
+                    'success': False,
+                    'message': 'Diagnosis access is not available for patient accounts',
+                    'error': 'DIAGNOSIS_ACCESS_DENIED'
+                }), 403
+            return fn(*args, **kwargs)
+        except Exception:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid or missing token',
+                'error': 'TOKEN_INVALID'
+            }), 401
+    return wrapper
+
+
 def validate_email(email):
     """Validate email format"""
     import re

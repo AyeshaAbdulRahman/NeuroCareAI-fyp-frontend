@@ -51,21 +51,20 @@ export const reportService = {
     }
   },
 
-  downloadReport: async (reportId, format = 'txt') => {
+  downloadReport: async (reportId, format = 'pdf') => {
     try {
       const response = await api.get(`/reports/${reportId}/download`, {
         params: { format },
         responseType: 'blob',
       });
-      const extension = format === 'json' ? 'json' : 'txt';
-      triggerDownload(response.data, `report-${reportId}.${extension}`);
+      triggerDownload(response.data, `report-${reportId}.pdf`);
       return { success: true };
     } catch (error) {
       throw normalizeError(error, 'Failed to download report');
     }
   },
 
-  downloadReports: async (reportIds, format = 'txt') => {
+  downloadReports: async (reportIds, format = 'pdf') => {
     try {
       const response = await api.get('/reports/download', {
         params: { ids: reportIds.join(','), format },
