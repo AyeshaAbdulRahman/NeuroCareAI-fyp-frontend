@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import userService from "../api/userService";
+import { formatDateTime } from "../utils/dateTime";
 import "./Styles/ActivityDetails.css";
 
 const activityFilters = [
@@ -75,11 +76,6 @@ function ActivityDetails() {
     return titleMap[activity.activity_type] || "Activity";
   };
 
-  const formatDateTime = (dateString) => {
-    if (!dateString) return "Unknown time";
-    return new Date(dateString).toLocaleString();
-  };
-
   return (
     <section className="activity-details-page">
       <div className="activity-details-header">
@@ -126,7 +122,7 @@ function ActivityDetails() {
               <p className="activity-item-description">
                 {activity.description || "No description provided."}
               </p>
-              <small className="activity-item-time">{formatDateTime(activity.created_at)}</small>
+              <small className="activity-item-time">{formatDateTime(activity.created_at, "Unknown time")}</small>
             </div>
           ))}
         </div>
