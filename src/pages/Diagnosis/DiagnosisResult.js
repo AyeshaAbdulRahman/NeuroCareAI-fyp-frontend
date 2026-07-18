@@ -161,8 +161,9 @@
 
 
 
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { reportService } from "../../api/reportService";
 import "./Diagnosis.css";
 
 /* ─── shared cell styles ───────────────────────────────────────────────────── */
@@ -438,6 +439,59 @@ export default function DiagnosisResult() {
   const { state } = useLocation();
   const navigate  = useNavigate();
   const r         = state?.results;
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+
+  const sourceFiles = useMemo(() => {
+    if (Array.isArray(r?.source_files)) return r.source_files.filter(Boolean);
+    if (r?.source_file) return [r.source_file];
+    return [];
+  }, [r]);
+
+  const reportMeta = useMemo(() => {
+    if (!r) return null;
+    const createdAt = new Date().toISOString();
+    if (r.mode === "single") {
+      return {
+        title: `Single EEG Report - ${r.subject || "Patient"}`,
+        report_type: "single",
+        source_file: sourceFiles[0] || r.subject || "EEG recording",
+        verdict: r.ensemble?.verdict || "UNKNOWN",
+        confidence: r.ensemble?.avg_dementia_prob,
+        summary: r.ensemble?.interpretation || "Single patient EEG diagnosis report",
+        created_at: createdAt,
+      };
+    }
+    return {
+      title: `Batch EEG Report - ${sourceFiles[0] || "Dataset"}`,
+      report_type: "batch",
+      source_files: sourceFiles,
+      verdict: `Accuracy ${Number(r.accuracy || 0).toFixed(2)}`,
+      confidence: r.accuracy,
+      summary: `Batch diagnosis completed with ${r.n_test_samples || 0} test samples`,
+      created_at: createdAt,
+    };
+  }, [r, sourceFiles]);
+
+  async function handleSaveReport() {
+    if (!r || !reportMeta) return;
+    try {
+      setSaving(true);
+      setSaveMessage("");
+      const response = await reportService.saveReport({
+        results: r,
+        ...reportMeta,
+      });
+      if (!response?.success) {
+        throw new Error(response?.message || "Failed to save report");
+      }
+      setSaveMessage("Report saved to history.");
+    } catch (error) {
+      setSaveMessage(error?.message || "Failed to save report.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   if (!r) {
     return (
@@ -466,10 +520,14 @@ export default function DiagnosisResult() {
         <button className="btn btn-small" onClick={() => navigate("/diagnosis/input")}>
           New Diagnosis
         </button>
+        <button className="btn btn-small" onClick={handleSaveReport} disabled={saving}>
+          {saving ? "Saving..." : "Save Report"}
+        </button>
         <button className="btn btn-small" onClick={() => navigate("/diagnosis/report-history")}>
           View Reports
         </button>
       </div>
+      {saveMessage && <p className="section-subtext" style={{ marginTop: "1rem" }}>{saveMessage}</p>}
     </div>
   );
 }

@@ -23,6 +23,7 @@ sys.path.insert(0, str(BASE_DIR))
 
 from app import create_app
 from app.models import db, User, ChatSession, ChatMessage, ChatArchive
+from app.models import db, User, ChatSession, ChatMessage, ChatArchive, DiagnosisReport
 
 
 def initialize_database(config_name='development'):
@@ -50,6 +51,8 @@ def initialize_database(config_name='development'):
             print("   • chat_sessions")
             print("   • chat_messages")
             print("   • chat_archives")
+                        print("   • diagnosis_reports")
+                        print("   • diagnosis_reports: Stores saved batch/single EEG diagnosis reports")
             
             # Create default admin if doesn't exist
             admin = User.query.filter_by(email='admin@neurocare.ai').first()

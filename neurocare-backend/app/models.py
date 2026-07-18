@@ -198,3 +198,49 @@ class ChatArchive(db.Model):
                 'message_count': self.message_count,
                 'archived_at': self.archived_at.isoformat() if self.archived_at else None
             }
+
+
+class DiagnosisReport(db.Model):
+    """Saved diagnosis report for batch or single-patient EEG results."""
+    __tablename__ = 'diagnosis_reports'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    title = db.Column(db.String(160), nullable=False)
+    report_type = db.Column(db.String(20), nullable=False)  # batch | single
+    source_files = db.Column(db.Text, default='[]')
+    verdict = db.Column(db.String(120))
+    confidence = db.Column(db.Float)
+    summary = db.Column(db.String(255))
+    report_json = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def get_source_files(self):
+        try:
+            parsed = json.loads(self.source_files or '[]')
+            return parsed if isinstance(parsed, list) else []
+        except Exception:
+            return []
+
+    def get_report_json(self):
+        try:
+            parsed = json.loads(self.report_json or '{}')
+            return parsed if isinstance(parsed, dict) else {}
+        except Exception:
+            return {}
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'title': self.title,
+            'report_type': self.report_type,
+            'source_files': self.get_source_files(),
+            'verdict': self.verdict,
+            'confidence': self.confidence,
+            'summary': self.summary,
+            'report': self.get_report_json(),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }

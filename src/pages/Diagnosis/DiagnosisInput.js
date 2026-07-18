@@ -194,7 +194,15 @@ export default function DiagnosisInput() {
       const res  = await fetch("/api/predict", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Prediction failed");
-      navigate("/diagnosis/result", { state: { results: { ...data, mode: "batch" } } });
+      navigate("/diagnosis/result", {
+        state: {
+          results: {
+            ...data,
+            mode: "batch",
+            source_files: [fileX.name, fileY.name, fileGroups.name],
+          },
+        },
+      });
     } catch (e) {
       setError(e.message);
     } finally {
@@ -218,7 +226,15 @@ export default function DiagnosisInput() {
       const res  = await fetch("/api/predict/single", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Inference failed");
-      navigate("/diagnosis/result", { state: { results: { ...data, mode: "single" } } });
+      navigate("/diagnosis/result", {
+        state: {
+          results: {
+            ...data,
+            mode: "single",
+            source_file: fileSet.name,
+          },
+        },
+      });
     } catch (e) {
       setError(e.message);
     } finally {

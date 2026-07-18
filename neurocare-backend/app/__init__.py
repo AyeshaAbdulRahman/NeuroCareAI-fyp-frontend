@@ -27,7 +27,7 @@ def create_app(config_name='default'):
     os.makedirs(upload_folder, exist_ok=True)
     
     # Register blueprints
-    from app.routes import auth_bp, users_bp, feedback_bp, admin_bp, chatbot_bp
+    from app.routes import auth_bp, users_bp, feedback_bp, admin_bp, chatbot_bp, reports_bp
     from app.blueprints.predict import predict_bp          # ← ADD THIS
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -35,6 +35,7 @@ def create_app(config_name='default'):
     app.register_blueprint(feedback_bp, url_prefix='/api/feedback')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(chatbot_bp, url_prefix='/api/chatbot')
+    app.register_blueprint(reports_bp, url_prefix='/api/reports')
     app.register_blueprint(predict_bp)                     # ← ADD THIS
     
     # Health check route

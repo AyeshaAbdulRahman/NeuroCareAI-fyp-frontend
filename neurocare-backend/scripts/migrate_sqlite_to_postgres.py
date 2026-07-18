@@ -81,7 +81,11 @@ def print_counts(session, label: str) -> None:
     users_count = session.execute(text("SELECT COUNT(*) FROM users")).scalar_one()
     feedback_count = session.execute(text("SELECT COUNT(*) FROM feedbacks")).scalar_one()
     activity_count = session.execute(text("SELECT COUNT(*) FROM user_activities")).scalar_one()
-    print(f"{label} users={users_count}, feedbacks={feedback_count}, user_activities={activity_count}")
+    reports_count = session.execute(text("SELECT COUNT(*) FROM diagnosis_reports")).scalar_one()
+    print(
+        f"{label} users={users_count}, feedbacks={feedback_count}, "
+        f"user_activities={activity_count}, diagnosis_reports={reports_count}"
+    )
 
 
 def reset_sequences(session) -> None:
@@ -98,6 +102,11 @@ def reset_sequences(session) -> None:
     session.execute(
         text(
             "SELECT setval(pg_get_serial_sequence('user_activities', 'id'), COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM user_activities"
+        )
+    )
+    session.execute(
+        text(
+            "SELECT setval(pg_get_serial_sequence('diagnosis_reports', 'id'), COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM diagnosis_reports"
         )
     )
 
@@ -118,14 +127,17 @@ def migrate(sqlite_path: Path, postgres_uri: str, force: bool) -> None:
         existing_users = db.session.execute(text("SELECT COUNT(*) FROM users")).scalar_one()
         existing_feedbacks = db.session.execute(text("SELECT COUNT(*) FROM feedbacks")).scalar_one()
         existing_activities = db.session.execute(text("SELECT COUNT(*) FROM user_activities")).scalar_one()
+        existing_reports = db.session.execute(text("SELECT COUNT(*) FROM diagnosis_reports")).scalar_one()
 
-        if (existing_users or existing_feedbacks or existing_activities) and not force:
+        if (existing_users or existing_feedbacks or existing_activities or existing_reports) and not force:
             raise RuntimeError(
                 "PostgreSQL target has existing data. Re-run with --force to truncate and continue."
             )
 
         if force:
-            db.session.execute(text("TRUNCATE TABLE feedbacks, user_activities, users RESTART IDENTITY CASCADE"))
+            db.session.execute(
+                text("TRUNCATE TABLE feedbacks, user_activities, diagnosis_reports, users RESTART IDENTITY CASCADE")
+            )
             db.session.commit()
 
         if users_rows:
@@ -178,6 +190,9 @@ def migrate(sqlite_path: Path, postgres_uri: str, force: bool) -> None:
                 ),
                 activity_rows,
             )
+
+        # Diagnosis reports are user-generated at runtime and are not present
+        # in the legacy SQLite export, so we only ensure the table exists.
 
         reset_sequences(db.session)
         db.session.commit()
