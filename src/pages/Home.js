@@ -1,10 +1,40 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import contactService from "../api/contactService";
 import "./Styles/Home.css";
 
 function Home({ isLoggedIn }) {
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Contact form state
+  const [contactForm, setContactForm] = useState({ name: "", email: "", message: "" });
+  const [contactStatus, setContactStatus] = useState({ loading: false, success: null, error: null });
+
+  const handleContactChange = (e) => {
+    const { name, value } = e.target;
+    setContactForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleContactSubmit = async (e) => {
+    e.preventDefault();
+    setContactStatus({ loading: true, success: null, error: null });
+    try {
+      const res = await contactService.submitMessage(contactForm);
+      setContactStatus({
+        loading: false,
+        success: res.message || "Message sent successfully!",
+        error: null,
+      });
+      setContactForm({ name: "", email: "", message: "" });
+    } catch (err) {
+      setContactStatus({
+        loading: false,
+        success: null,
+        error: err.message || "Failed to send message. Please try again.",
+      });
+    }
+  };
 
   // Smooth scroll from Navbar (Features / Contact)
   useEffect(() => {
@@ -40,19 +70,33 @@ function Home({ isLoggedIn }) {
     <>
       {/* Hero */}
       <section className="hero">
-        <h2>Empowering Neurodegenerative Care with Intelligence</h2>
-        <p>
-          NeuroCare AI combines EEG-based diagnosis with an intelligent caregiver
-          assistant to enhance early detection, simplify patient management, and
-          bring transparency to AI healthcare.
-        </p>
+        <video
+          className="hero-video"
+          autoPlay
+          loop
+          muted
+          playsInline
+          poster="/videos/hero-poster.jpg"
+        >
+          <source src="/videos/hero-bg.mp4" type="video/mp4" />
+        </video>
+        <div className="hero-overlay"></div>
 
-        {/*  Hide button when user is logged in */}
-        {!isLoggedIn && (
-          <button className="btn" onClick={() => navigate("/signup")}>
-            Get Started
-          </button>
-        )}
+        <div className="hero-content">
+          <h2>Empowering Neurodegenerative Care with Intelligence</h2>
+          <p>
+            NeuroCare AI combines EEG-based diagnosis with an intelligent caregiver
+            assistant to enhance early detection, simplify patient management, and
+            bring transparency to AI healthcare.
+          </p>
+
+          {/*  Hide button when user is logged in */}
+          {!isLoggedIn && (
+            <button className="btn" onClick={() => navigate("/signup")}>
+              Get Started
+            </button>
+          )}
+        </div>
       </section>
 
       {/* Features */}
@@ -170,17 +214,40 @@ function Home({ isLoggedIn }) {
               implementations.
             </p>
           </div>
-          <form onSubmit={(e) => e.preventDefault()}>
-            <input type="text" name="name" placeholder="Your Name" required />
-            <input type="email" name="email" placeholder="Your Email" required />
+          <form onSubmit={handleContactSubmit}>
+            <input
+              type="text"
+              name="name"
+              placeholder="Your Name"
+              value={contactForm.name}
+              onChange={handleContactChange}
+              required
+            />
+            <input
+              type="email"
+              name="email"
+              placeholder="Your Email"
+              value={contactForm.email}
+              onChange={handleContactChange}
+              required
+            />
             <textarea
               name="message"
               placeholder="Your Message"
+              value={contactForm.message}
+              onChange={handleContactChange}
               required
             ></textarea>
-            <button type="submit" className="btn">
-              Send Message
+            <button type="submit" className="btn" disabled={contactStatus.loading}>
+              {contactStatus.loading ? "Sending..." : "Send Message"}
             </button>
+
+            {contactStatus.success && (
+              <p className="contact-success">{contactStatus.success}</p>
+            )}
+            {contactStatus.error && (
+              <p className="contact-error">{contactStatus.error}</p>
+            )}
           </form>
         </div>
       </section>

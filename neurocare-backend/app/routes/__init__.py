@@ -5,5 +5,6 @@ from app.routes.feedback import feedback_bp
 from app.routes.admin import admin_bp
 from app.routes.chatbot import chatbot_bp
 from app.routes.reports import reports_bp
+from app.routes.contact import contact_bp
 
-__all__ = ['auth_bp', 'users_bp', 'feedback_bp', 'admin_bp', 'chatbot_bp', 'reports_bp']
+__all__ = ['auth_bp', 'users_bp', 'feedback_bp', 'admin_bp', 'chatbot_bp', 'reports_bp', 'contact_bp']

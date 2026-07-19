@@ -5,12 +5,25 @@ function About() {
   return (
     <div className="about-page">
       {/* Hero Section */}
-      <header>
-        <h2>About NeuroCare AI</h2>
-        <p>
-          NeuroCare AI merges EEG-based diagnostic intelligence and AI-powered caregiver assistance
-          to redefine dementia care through precision, empathy, and trust.
-        </p>
+      <header className="about-hero">
+        <video
+          className="about-hero-video"
+          autoPlay
+          loop
+          muted
+          playsInline
+        >
+          <source src="/videos/about-bg.mp4" type="video/mp4" />
+        </video>
+        <div className="about-hero-overlay"></div>
+
+        <div className="about-hero-content">
+          <h2>About NeuroCare AI</h2>
+          <p>
+            NeuroCare AI merges EEG-based diagnostic intelligence and AI-powered caregiver assistance
+            to redefine dementia care through precision, empathy, and trust.
+          </p>
+        </div>
       </header>
 
       {/* Mission Section */}
