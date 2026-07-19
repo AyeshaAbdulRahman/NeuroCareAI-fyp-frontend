@@ -4,6 +4,16 @@ import { useNavigate } from "react-router-dom";
 import userService from "../api/userService";
 import { formatTimeAgo } from "../utils/dateTime";
 
+// Base URL of the Flask backend (no /api suffix — used for static/uploaded files)
+const BACKEND_URL = "http://127.0.0.1:5000";
+
+// Builds a full, browser-loadable URL from the relative path the backend stores in the DB
+const getProfileImageUrl = (path) => {
+  if (!path) return null;
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  return `${BACKEND_URL}${path}`;
+};
+
 function Dashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
@@ -38,7 +48,7 @@ function Dashboard() {
       if (response.success) {
         setUser(response.user);
         if (response.user.profile_picture) {
-          setProfileImage(response.user.profile_picture);
+          setProfileImage(getProfileImageUrl(response.user.profile_picture));
         }
       } else {
         setError("Failed to load profile");
@@ -109,7 +119,7 @@ function Dashboard() {
       try {
         const response = await userService.uploadProfilePicture(file);
         if (response.success) {
-          setProfileImage(response.profile_picture);
+          setProfileImage(getProfileImageUrl(response.profile_picture));
           // Update localStorage
           const updatedUser = { ...user, profile_picture: response.profile_picture };
           localStorage.setItem('user', JSON.stringify(updatedUser));

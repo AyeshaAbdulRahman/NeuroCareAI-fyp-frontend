@@ -15,31 +15,17 @@ function Diagnosis() {
     },
     {
       id: 2,
-      title: "Step 2 — AI Preprocessing",
-      desc: "Our AI engine filters noise, extracts frequency patterns, and normalizes EEG signals to prepare them for deep CNN-LSTM analysis.",
-      icon: "⚙️",
-      path: "/diagnosis/preprocess",
-    },
-    {
-      id: 3,
-      title: "Step 3 — Model Diagnosis",
+      title: "Step 2 — Model Diagnosis",
       desc: "The trained model predicts Alzheimer’s Disease (AD) or Frontotemporal Dementia (FTD), providing a confidence score and explainable insights.",
       icon: "📊",
       path: "/diagnosis/result",
     },
     {
-      id: 4,
-      title: "Step 4 — Report Generation",
+      id: 3,
+      title: "Step 3 — Report History",
       desc: "View, download, or save your diagnosis reports with AI confidence metrics and EEG pattern highlights for medical validation.",
       icon: "📂",
       path: "/diagnosis/report-history",
-    },
-    {
-      id: 5,
-      title: "Step 5 — Visual Analytics",
-      desc: "Explore EEG waveform plots, spectral power visuals, and model attention maps to understand the AI’s decision-making process.",
-      icon: "📈",
-      path: "/diagnosis/visualization",
     },
   ];
 
@@ -84,4 +70,3 @@ function Diagnosis() {
 }
 
 export default Diagnosis;
-

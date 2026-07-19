@@ -3,7 +3,6 @@ from __future__ import annotations
 import io
 import json
 import re
-import textwrap
 import zipfile
 from datetime import datetime
 
@@ -403,100 +402,145 @@ def _render_report_pdf(report: DiagnosisReport) -> bytes:
     return buffer.getvalue()
 
 
-def _pdf_escape(value: str) -> str:
-    return value.replace('\\', '\\\\').replace('(', '\\(').replace(')', '\\)')
+
+# ---------------------------------------------------------------------------
+# Chart-ready visualization data
+# ---------------------------------------------------------------------------
+
+def _pct(value, scale_from_fraction=True):
+    """Coerce a numeric value to a 0-100 percentage, tolerant of bad input."""
+    try:
+        num = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    if scale_from_fraction and 0 <= num <= 1:
+        num *= 100
+    return round(num, 2)
 
 
-def _wrap_pdf_lines(text: str, max_chars: int = 95) -> list[str]:
-    lines = []
-    wrapper = textwrap.TextWrapper(
-        width=max_chars,
-        break_long_words=True,
-        break_on_hyphens=False,
-        replace_whitespace=False,
-        drop_whitespace=False,
-        subsequent_indent='  ',
-    )
-    for raw_line in text.splitlines():
-        lines.extend(wrapper.wrap(raw_line) if raw_line else [''])
-    return lines or ['']
+def _build_visualization(report: DiagnosisReport) -> dict:
+    payload = report.get_report_json() or {}
+    mode = (report.report_type or payload.get('mode') or 'single').strip().lower()
+    charts = {}
+
+    if mode == 'batch':
+        target_names = payload.get('target_names') or []
+        confusion_matrix = payload.get('confusion_matrix')
+        if isinstance(confusion_matrix, list) and target_names:
+            charts['confusion_matrix'] = {
+                'type': 'heatmap',
+                'title': 'Confusion Matrix',
+                'labels': target_names,
+                'matrix': confusion_matrix,
+            }
+
+        class_report = payload.get('class_report')
+        if isinstance(class_report, list) and class_report:
+            charts['class_metrics'] = {
+                'type': 'bar',
+                'title': 'Precision / Recall / F1 by Class',
+                'labels': [row.get('class') for row in class_report],
+                'series': [
+                    {'name': 'Precision', 'data': [_pct(row.get('precision')) for row in class_report]},
+                    {'name': 'Recall', 'data': [_pct(row.get('recall')) for row in class_report]},
+                    {'name': 'F1', 'data': [_pct(row.get('f1')) for row in class_report]},
+                ],
+            }
+
+        macro_avg = payload.get('macro_avg') or {}
+        weighted_avg = payload.get('weighted_avg') or {}
+        if macro_avg or weighted_avg:
+            metrics = ['precision', 'recall', 'f1']
+            charts['averages'] = {
+                'type': 'bar',
+                'title': 'Macro vs Weighted Averages',
+                'labels': [_format_label(m) for m in metrics],
+                'series': [
+                    {'name': 'Macro Avg', 'data': [_pct(macro_avg.get(m)) for m in metrics]},
+                    {'name': 'Weighted Avg', 'data': [_pct(weighted_avg.get(m)) for m in metrics]},
+                ],
+            }
+
+        if payload.get('accuracy') is not None:
+            charts['accuracy_gauge'] = {
+                'type': 'gauge',
+                'title': 'Overall Accuracy',
+                'value': _pct(payload.get('accuracy')),
+                'max': 100,
+            }
+
+        if payload.get('n_test_samples') is not None:
+            charts['sample_size'] = {
+                'type': 'stat',
+                'title': 'Test Samples',
+                'value': payload.get('n_test_samples'),
+            }
+
+    else:
+        band_powers = payload.get('band_powers')
+        if isinstance(band_powers, dict) and band_powers:
+            charts['band_powers'] = {
+                'type': 'bar',
+                'title': 'Frequency Band Powers',
+                'labels': list(band_powers.keys()),
+                'series': [{'name': 'Relative Power (%)', 'data': [_pct(v) for v in band_powers.values()]}],
+            }
+
+        ensemble = payload.get('ensemble') or {}
+        if ensemble:
+            charts['dementia_probability'] = {
+                'type': 'gauge',
+                'title': 'Dementia Probability',
+                'value': _pct(ensemble.get('avg_dementia_prob'), scale_from_fraction=False),
+                'max': 100,
+                'tier': ensemble.get('confidence_tier'),
+            }
+
+        tasks = payload.get('tasks') or {}
+        for task_name, task_data in tasks.items():
+            if not isinstance(task_data, dict):
+                continue
+            task_label = task_data.get('task_name') or _format_label(task_name)
+
+            mean_probs = task_data.get('mean_probs')
+            if isinstance(mean_probs, dict) and mean_probs:
+                charts[f'{task_name}_class_probabilities'] = {
+                    'type': 'pie',
+                    'title': f'{task_label} — Mean Class Probabilities',
+                    'labels': list(mean_probs.keys()),
+                    'data': [_pct(v, scale_from_fraction=False) for v in mean_probs.values()],
+                }
+
+            epoch_votes = task_data.get('epoch_votes')
+            if isinstance(epoch_votes, dict) and epoch_votes:
+                charts[f'{task_name}_epoch_votes'] = {
+                    'type': 'bar',
+                    'title': f'{task_label} — Per-Epoch Votes',
+                    'labels': list(epoch_votes.keys()),
+                    'series': [{'name': 'Epoch Votes', 'data': list(epoch_votes.values())}],
+                }
+
+    return {
+        'report_id': report.id,
+        'report_type': mode,
+        'title': report.title,
+        'verdict': report.verdict,
+        'confidence': _format_confidence(report.confidence),
+        'charts': charts,
+    }
 
 
-def _build_pdf(content: str) -> bytes:
-    page_width = 612
-    page_height = 792
-    margin_x = 54
-    margin_top = 58
-    line_height = 14
-    font_size = 10
-    lines_per_page = int((page_height - (margin_top * 2)) / line_height)
-    wrapped_lines = _wrap_pdf_lines(content)
-    pages = [
-        wrapped_lines[index:index + lines_per_page]
-        for index in range(0, len(wrapped_lines), lines_per_page)
-    ] or [['']]
-
-    objects = [
-        (1, b'<< /Type /Catalog /Pages 2 0 R >>'),
-        (3, b'<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'),
-    ]
-    kids = []
-
-    for page_index, page_lines in enumerate(pages):
-        content_id = 4 + (page_index * 2)
-        page_id = content_id + 1
-        kids.append(f'{page_id} 0 R')
-
-        commands = [
-            'BT',
-            f'/F1 {font_size} Tf',
-            f'{line_height} TL',
-            f'{margin_x} {page_height - margin_top} Td',
-        ]
-        for line in page_lines:
-            safe_line = line.encode('latin-1', errors='replace').decode('latin-1')
-            commands.append(f'({_pdf_escape(safe_line)}) Tj')
-            commands.append('T*')
-        commands.append('ET')
-
-        stream = '\n'.join(commands).encode('latin-1')
-        objects.append((
-            content_id,
-            f'<< /Length {len(stream)} >>\nstream\n'.encode('ascii') + stream + b'\nendstream'
-        ))
-        objects.append((
-            page_id,
-            (
-                f'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {page_width} {page_height}] '
-                f'/Resources << /Font << /F1 3 0 R >> >> /Contents {content_id} 0 R >>'
-            ).encode('ascii')
-        ))
-
-    objects.append((2, f'<< /Type /Pages /Kids [{" ".join(kids)}] /Count {len(kids)} >>'.encode('ascii')))
-    objects.sort(key=lambda item: item[0])
-
-    pdf = bytearray(b'%PDF-1.4\n%\xe2\xe3\xcf\xd3\n')
-    offsets = [0]
-    for object_id, body in objects:
-        offsets.append(len(pdf))
-        pdf.extend(f'{object_id} 0 obj\n'.encode('ascii'))
-        pdf.extend(body)
-        pdf.extend(b'\nendobj\n')
-
-    xref_offset = len(pdf)
-    pdf.extend(f'xref\n0 {len(objects) + 1}\n'.encode('ascii'))
-    pdf.extend(b'0000000000 65535 f \n')
-    for offset in offsets[1:]:
-        pdf.extend(f'{offset:010d} 00000 n \n'.encode('ascii'))
-    pdf.extend(
-        f'trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\n'
-        f'startxref\n{xref_offset}\n%%EOF\n'.encode('ascii')
-    )
-    return bytes(pdf)
-
-
-def _render_report_pdf(report: DiagnosisReport) -> bytes:
-    return _build_pdf(_render_report_text(report))
+@reports_bp.route('/<int:report_id>/visualization', methods=['GET'])
+@diagnosis_access_required
+def get_report_visualization(report_id: int):
+    try:
+        user_id = get_current_user_id()
+        report = DiagnosisReport.query.filter_by(id=report_id, user_id=user_id).first()
+        if not report:
+            return jsonify({'success': False, 'message': 'Report not found'}), 404
+        return jsonify({'success': True, 'visualization': _build_visualization(report)}), 200
+    except Exception as exc:
+        return jsonify({'success': False, 'message': 'Failed to build visualization data', 'error': str(exc)}), 500
 
 
 @reports_bp.route('', methods=['POST'])

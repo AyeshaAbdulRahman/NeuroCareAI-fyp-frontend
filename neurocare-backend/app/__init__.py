@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_sqlalchemy import SQLAlchemy
@@ -27,7 +27,7 @@ def create_app(config_name='default'):
     os.makedirs(upload_folder, exist_ok=True)
     
     # Register blueprints
-    from app.routes import auth_bp, users_bp, feedback_bp, admin_bp, chatbot_bp, reports_bp
+    from app.routes import auth_bp, users_bp, feedback_bp, admin_bp, chatbot_bp, reports_bp, contact_bp
     from app.blueprints.predict import predict_bp          # ← ADD THIS
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -36,8 +36,14 @@ def create_app(config_name='default'):
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(chatbot_bp, url_prefix='/api/chatbot')
     app.register_blueprint(reports_bp, url_prefix='/api/reports')
+    app.register_blueprint(contact_bp, url_prefix='/api/contact')
     app.register_blueprint(predict_bp)                     # ← ADD THIS
     
+    # Serve uploaded files (profile pictures, etc.)
+    @app.route('/uploads/<path:filename>')
+    def serve_uploaded_file(filename):
+        return send_from_directory(upload_folder, filename)
+
     # Health check route
     @app.route('/api/health', methods=['GET'])
     def health_check():

@@ -19,11 +19,9 @@ import Feedback from "./pages/Feedback";
 import Chatbot from "./pages/Chatbot";
 import DiagnosisMain from "./pages/Diagnosis/Diagnosis";
 import DiagnosisInput from "./pages/Diagnosis/DiagnosisInput";
-import DiagnosisPreprocess from "./pages/Diagnosis/DiagnosisPreprocess";
 
 import DiagnosisResult from "./pages/Diagnosis/DiagnosisResult";
 import ReportHistory from "./pages/Diagnosis/ReportHistory";
-import Visualization from "./pages/Diagnosis/Visualization";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
 import AdminUsers from "./pages/Admin/AdminUsers";
 import AdminFeedback from "./pages/Admin/AdminFeedback";
@@ -142,11 +140,6 @@ function App() {
             <DiagnosisInput />
           </ProtectedRoute>
         } />
-        <Route path="/diagnosis/preprocess" element={
-          <ProtectedRoute blockPatient={true}>
-            <DiagnosisPreprocess />
-          </ProtectedRoute>
-        } />
         <Route path="/diagnosis/result" element={
           <ProtectedRoute blockPatient={true}>
             <DiagnosisResult />
@@ -155,11 +148,6 @@ function App() {
         <Route path="/diagnosis/report-history" element={
           <ProtectedRoute blockPatient={true}>
             <ReportHistory />
-          </ProtectedRoute>
-        } />
-        <Route path="/diagnosis/visualization" element={
-          <ProtectedRoute blockPatient={true}>
-            <Visualization />
           </ProtectedRoute>
         } />
 
@@ -219,4 +207,3 @@ function AppWrapper() {
 }
 
 export default AppWrapper;
-

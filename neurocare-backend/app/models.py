@@ -85,6 +85,28 @@ class Feedback(db.Model):
         }
 
 
+class ContactMessage(db.Model):
+    """Message submitted via the public Contact Us form on the homepage."""
+    __tablename__ = 'contact_messages'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), default='new')  # new, read, replied
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'email': self.email,
+            'message': self.message,
+            'status': self.status,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
 class UserActivity(db.Model):
     """User activity tracking for dashboard"""
     __tablename__ = 'user_activities'
