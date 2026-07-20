@@ -1,0 +1,10 @@
+# Heavy ML dependencies for the EEG diagnosis feature (blueprints/predict.py).
+# Kept separate from requirements.txt so CI and lightweight deploys stay fast.
+# Install alongside the base file to run the full diagnosis pipeline:
+#   pip install -r requirements.txt -r requirements-ml.txt
+#
+# torch is installed as a CPU-only build (no CUDA) to save ~5GB.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+mne
+mne-icalabel
